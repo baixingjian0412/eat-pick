@@ -231,7 +231,7 @@ function _renderHero(type) {
             <button class="btn btn-primary" onclick="onManualSubmit()">搜索</button>
           </div>
         </div>
-        <p style="margin-top:16px;font-size:0.8rem;color:var(--text-light)">也可以<a href="#" onclick="Location.get(true).then(()=>{}).catch(()=>{});return false" style="color:var(--primary)">重新获取定位</a></p>
+        <p style="margin-top:16px;font-size:0.8rem;color:var(--text-light)">也可以<a href="#" onclick="Locator.get(true).then(()=>{}).catch(()=>{});return false" style="color:var(--primary)">重新获取定位</a></p>
       ` : ''}
     </div>
   `;
@@ -388,7 +388,7 @@ function _renderManual() {
         </div>
       </div>
       <p style="margin-top:16px;font-size:0.8rem;color:var(--text-light)">
-        也可以 <a href="#" onclick="Location.get(true).then(()=>{State.location=Location.getCurrent();State.phase='locating';render();_loadWithLocation(State.location)}).catch(()=>{});return false" style="color:var(--primary)">重新获取定位</a>
+        也可以 <a href="#" onclick="Locator.get(true).then(()=>{State.location=Locator.getCurrent();State.phase='locating';render();_loadWithLocation(State.location)}).catch(()=>{});return false" style="color:var(--primary)">重新获取定位</a>
       </p>
       <p style="margin-top:20px;font-size:0.75rem;color:var(--text-light)">
         💡 搜索地址后列表和随机按钮才会出现
