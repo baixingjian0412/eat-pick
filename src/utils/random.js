@@ -78,3 +78,5 @@ const RandomPicker = (() => {
 
   return { init, pick, filterByCategory, getPoolSize, getTotalSize };
 })();
+
+window.RandomPicker = RandomPicker;

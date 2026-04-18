@@ -176,3 +176,5 @@ const AMap = (() => {
 
   return { searchNearby, reverseGeocode, geocode, searchByKeyword, getApiKey, isKeyConfigured };
 })();
+
+window.AMap = AMap;

@@ -433,3 +433,17 @@ function showToast(msg, type = '') {
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
+
+// 暴露全局函数供 onclick 使用
+window.State = State;
+window.onSearchSubmit = onSearchSubmit;
+window.onCategoryChange = onCategoryChange;
+window.onRandomPick = onRandomPick;
+window.onBackToList = onBackToList;
+window.onShowSimilar = onShowSimilar;
+window.showAddressModal = showAddressModal;
+window.onManualSubmit = onManualSubmit;
+window.pickSingle = pickSingle;
+window.showToast = showToast;
+window.refreshData = refreshData;
+window.Location = Location;

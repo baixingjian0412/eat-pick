@@ -41,3 +41,5 @@ const Storage = (() => {
 
   return { getLocationCache, saveLocationCache, clearLocationCache, getRemainingPool, saveRemainingPool, clearRemainingPool };
 })();
+
+window.Storage = Storage;
