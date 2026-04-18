@@ -22,19 +22,21 @@ const State = {
 document.addEventListener('DOMContentLoaded', async () => {
   render();
 
-  // 检查是否已有缓存位置
-  const cached = Storage.getLocationCache();
-  if (cached && cached.lat && cached.lng) {
-    // 有缓存 → 直接显示定位中，加载数据
-    State.phase = 'locating';
-    render();
-    await _loadWithLocation(cached);
-  } else {
-    // 无缓存 → 请求定位
-    State.phase = 'locating';
-    render();
-    await _startLocation();
-  }
+  // 直接显示手动输入界面，让用户选择
+  State.phase = 'manual';
+  render();
+  
+  // 可选：尝试自动定位（注释掉，先让用户选择）
+  // const cached = Storage.getLocationCache();
+  // if (cached && cached.lat && cached.lng) {
+  //   State.phase = 'locating';
+  //   render();
+  //   await _loadWithLocation(cached);
+  // } else {
+  //   State.phase = 'locating';
+  //   render();
+  //   await _startLocation();
+  // }
 });
 
 // ========== 定位流程 ==========
