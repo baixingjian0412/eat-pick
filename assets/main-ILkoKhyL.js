@@ -378,27 +378,9 @@
   };
   document.addEventListener("DOMContentLoaded", async () => {
     render();
-    const cached = Storage.getLocationCache();
-    if (cached && cached.lat && cached.lng) {
-      State.phase = "locating";
-      render();
-      await _loadWithLocation(cached);
-    } else {
-      State.phase = "locating";
-      render();
-      await _startLocation();
-    }
+    State.phase = "manual";
+    render();
   });
-  async function _startLocation() {
-    try {
-      State.location = await Locator.get(true);
-      await _loadWithLocation(State.location);
-    } catch (err) {
-      State.errorMsg = err.message === "PERMISSION_DENIED" ? "位置权限被拒绝" : err.message === "TIMEOUT" ? "定位超时（20秒内无法获取位置）" : "定位失败";
-      State.phase = "manual";
-      render();
-    }
-  }
   async function _loadWithLocation(loc) {
     State.location = loc;
     State.phase = "loading";
