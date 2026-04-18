@@ -446,4 +446,4 @@ window.onManualSubmit = onManualSubmit;
 window.pickSingle = pickSingle;
 window.showToast = showToast;
 window.refreshData = refreshData;
-window.Location = Location;
+window.Locator = Location;
