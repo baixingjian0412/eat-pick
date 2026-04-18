@@ -265,18 +265,28 @@
   const AMapWrapper = /* @__PURE__ */ (() => {
     const API_KEY = "19dab2fef285a816ec8779e835984820";
     const RADIUS = 5e3;
-    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
-    async function _fetchWithProxy(url) {
-      const proxyUrl = CORS_PROXY + encodeURIComponent(url);
-      const resp = await fetch(proxyUrl);
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status}`);
-      }
-      return resp.json();
+    function jsonp(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "jsonp_" + Math.random().toString(36).substr(2, 9);
+        const script = document.createElement("script");
+        window[callbackName] = (data) => {
+          delete window[callbackName];
+          script.remove();
+          resolve(data);
+        };
+        script.onerror = () => {
+          delete window[callbackName];
+          script.remove();
+          reject(new Error("JSONP请求失败"));
+        };
+        const separator = url.includes("?") ? "&" : "?";
+        script.src = url + separator + "callback=" + callbackName;
+        document.head.appendChild(script);
+      });
     }
     async function searchNearby(lat, lng) {
       const url = `https://restapi.amap.com/v3/place/around?key=${API_KEY}&location=${lng},${lat}&radius=${RADIUS}&types=050000&offset=20&page=1&extensions=all`;
-      const data = await _fetchWithProxy(url);
+      const data = await jsonp(url);
       if (data.status !== "1") {
         throw new Error(data.info || "获取周边美食失败");
       }
@@ -290,7 +300,6 @@
           const d = parseInt(poi.distance);
           distance = d >= 1e3 ? `${(d / 1e3).toFixed(1)}km` : `${d}m`;
         }
-        let rating = "";
         let photo = "";
         if (poi.photos && poi.photos.length > 0) {
           photo = poi.photos[0].url || "";
@@ -301,7 +310,7 @@
           address: poi.address || "",
           type: poi.type || "",
           tel: poi.tel || "",
-          rating,
+          rating: "",
           distance,
           photo,
           lat: poi.location ? poi.location.split(",")[1] : "",
@@ -311,11 +320,7 @@
     }
     async function reverseGeocode(lat, lng, signal) {
       const url = `https://restapi.amap.com/v3/geocode/regeo?key=${API_KEY}&location=${lng},${lat}&extensions=base`;
-      if (signal) {
-        const controller = new AbortController();
-        signal.addEventListener("abort", () => controller.abort());
-      }
-      const data = await _fetchWithProxy(url);
+      const data = await jsonp(url);
       if (data.status !== "1" || !data.regeocode) {
         throw new Error("地址解析失败");
       }
@@ -327,7 +332,7 @@
     }
     async function geocode(address) {
       const url = `https://restapi.amap.com/v3/geocode/geo?key=${API_KEY}&address=${encodeURIComponent(address)}&city=&extensions=base`;
-      const data = await _fetchWithProxy(url);
+      const data = await jsonp(url);
       if (data.status !== "1" || !data.geocodes || data.geocodes.length === 0) {
         return [];
       }
@@ -342,8 +347,8 @@
       });
     }
     async function searchByKeyword(lat, lng, keyword) {
-      const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=050000&city=${encodeURIComponent("")}&citylimit=false&offset=20&page=1&extensions=all`;
-      const data = await _fetchWithProxy(url);
+      const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=050000&city=&citylimit=false&offset=20&page=1&extensions=all`;
+      const data = await jsonp(url);
       if (data.status !== "1") {
         throw new Error(data.info || "搜索失败");
       }
@@ -363,7 +368,7 @@
     }
     async function searchAddress(keyword) {
       const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=&city=&citylimit=false&offset=20&page=1&extensions=base`;
-      const data = await _fetchWithProxy(url);
+      const data = await jsonp(url);
       if (data.status !== "1") {
         throw new Error(data.info || "地址搜索失败");
       }
