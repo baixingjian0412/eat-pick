@@ -101,10 +101,21 @@ async function onSearchSubmit(keyword) {
   render();
 
   try {
-    // 先搜索地址
-    const loc = await Locator.search(keyword.trim());
+    // 使用 Promise.race 添加超时
+    const loc = await Promise.race([
+      Locator.search(keyword.trim()),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('搜索地址超时')), 5000))
+    ]);
+    console.log('地址定位成功', loc);
     State.location = loc;
-    const data = await AMapAPI.searchNearby(loc.lat, loc.lng);
+    
+    // 再次使用 Promise.race 添加超时
+    const data = await Promise.race([
+      AMapAPI.searchNearby(loc.lat, loc.lng),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('搜索餐厅超时')), 5000))
+    ]);
+    console.log('餐厅搜索成功', data.length, '条');
+    
     if (!data || data.length === 0) {
       State.phase = 'empty';
       render();
@@ -115,9 +126,9 @@ async function onSearchSubmit(keyword) {
     RandomPicker.init(data);
     State.phase = 'list';
   } catch (err) {
+    console.error('搜索错误:', err);
     State.phase = 'error';
     State.errorMsg = '搜索失败: ' + (err.message || err.toString() || '未知错误');
-    console.error('搜索错误:', err);
   }
   State.isLoading = false;
   render();

@@ -81,16 +81,23 @@ const Location = (() => {
   }
 
   async function search(keyword) {
-    const result = await AMapAPI.geocode(keyword);
-    if (!result || result.length === 0) {
-      throw new Error('未找到匹配的地址，请尝试更具体的描述');
+    console.log('Locator.search called', keyword);
+    try {
+      const result = await AMapAPI.geocode(keyword);
+      console.log('geocode result', result);
+      if (!result || result.length === 0) {
+        throw new Error('未找到匹配的地址，请尝试更具体的描述');
+      }
+      const item = result[0];
+      currentPos = { lat: item.lat, lng: item.lng };
+      currentAddr = item.formattedAddress || keyword;
+      currentCity = item.city || '';
+      _saveCache();
+      return { ...currentPos, address: currentAddr, city: currentCity };
+    } catch (e) {
+      console.error('Locator.search error', e);
+      throw e;
     }
-    const item = result[0];
-    currentPos = { lat: item.lat, lng: item.lng };
-    currentAddr = item.formattedAddress || keyword;
-    currentCity = item.city || '';
-    _saveCache();
-    return { ...currentPos, address: currentAddr, city: currentCity };
   }
 
   function getCurrent() {
