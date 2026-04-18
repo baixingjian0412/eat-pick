@@ -23,25 +23,50 @@ const AMapWrapper = (() => {
     { id: '12', name: '必胜客', address: '朝阳区建国路190号', type: '披萨', tel: '010-65788888', rating: '4.3', distance: '5.5km', photo: '', lat: 39.91, lng: 116.44 }
   ];
 
-  // 根据距离随机排序
+  // Fisher-Yates 洗牌算法
   function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    return array;
+    return shuffled;
+  }
+
+  // 根据位置生成伪随机种子，确保不同位置有不同结果
+  function pseudoRandom(lat, lng) {
+    const key = `${lat.toFixed(2)}${lng.toFixed(2)}`;
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = ((hash << 5) - hash) + key.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return Math.abs(hash);
   }
 
   /**
    * 周边搜索 - 返回模拟餐厅数据
    */
   async function searchNearby(lat, lng) {
-    // 返回随机排序的餐厅列表
+    // 使用位置作为种子生成不同的随机顺序
+    const seed = pseudoRandom(lat, lng);
+    const random = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+
     return new Promise(resolve => {
       setTimeout(() => {
-        const shuffled = shuffleArray([...mockRestaurants]);
-        resolve(shuffled);
-      }, 500);
+        // 根据位置打乱顺序
+        const shuffled = [...mockRestaurants].sort(() => random() - 0.5);
+        // 添加一些位置相关的变化
+        const result = shuffled.slice(0, 8 + Math.floor(random() * 5)).map((r, i) => ({
+          ...r,
+          id: `${lat}${lng}${i}`,
+          distance: `${(Math.random() * 4 + 0.5).toFixed(1)}km`
+        }));
+        resolve(result);
+      }, 300);
     });
   }
 
@@ -60,16 +85,29 @@ const AMapWrapper = (() => {
   }
 
   /**
-   * 地理编码 - 模拟
+   * 地理编码 - 模拟，根据地址关键词返回不同坐标
    */
   async function geocode(address) {
+    // 根据地址生成不同坐标
+    const hash = address.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const lat = 39.8 + (hash % 50) / 100;  // 39.8 - 40.3
+    const lng = 116.2 + (hash % 60) / 100;  // 116.2 - 116.8
+    
+    // 根据不同区域返回不同的城市
+    let city = '北京市';
+    if (address.includes('上海')) city = '上海市';
+    else if (address.includes('广州')) city = '广州市';
+    else if (address.includes('深圳')) city = '深圳市';
+    else if (address.includes('杭州')) city = '杭州市';
+    else if (address.includes('成都')) city = '成都市';
+    
     return new Promise(resolve => {
       setTimeout(() => {
         resolve([{
-          lat: 39.91,
-          lng: 116.44,
-          formattedAddress: address,
-          city: '北京市'
+          lat,
+          lng,
+          formattedAddress: city + address,
+          city
         }]);
       }, 200);
     });
