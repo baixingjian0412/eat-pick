@@ -57,7 +57,7 @@
       }
     }
     async function search(keyword) {
-      const result = await AMap.geocode(keyword);
+      const result = await AMapAPI.geocode(keyword);
       if (!result || result.length === 0) {
         throw new Error("未找到匹配的地址，请尝试更具体的描述");
       }
@@ -88,26 +88,7 @@
       }
     }
     async function _amapIpLocate(signal) {
-      const resp = await fetch(
-        `https://restapi.amap.com/v3/ip?key=${AMap.getApiKey()}`,
-        signal ? { signal } : {}
-      );
-      const data = await resp.json();
-      if (data.status !== "1" || !data.rectangle) {
-        throw new Error("IP定位无数据");
-      }
-      const [sw, ne] = data.rectangle.split(";");
-      const [slng, slat] = sw.split(",").map(Number);
-      const [nlng, nlat] = ne.split(",").map(Number);
-      const centerLat = (slat + nlat) / 2;
-      const centerLng = (slng + nlng) / 2;
-      const geo = await AMap.reverseGeocode(centerLat, centerLng, signal);
-      return {
-        lat: centerLat,
-        lng: centerLng,
-        address: geo.formattedAddress || data.province + data.city,
-        city: data.city || ""
-      };
+      throw new Error("IP定位暂不可用");
     }
     function _browserGeolocateWithRetry(retries = 1, signal) {
       return new Promise((resolve, reject) => {
@@ -130,7 +111,7 @@
               }
               try {
                 const geo = await Promise.race([
-                  AMap.reverseGeocode(lat, lng, signal),
+                  AMapAPI.reverseGeocode(lat, lng, signal),
                   new Promise((_, r) => setTimeout(() => r(new Error("GEO_TIMEOUT")), 5e3))
                 ]);
                 resolve({ lat, lng, address: (geo == null ? void 0 : geo.formattedAddress) || "", city: (geo == null ? void 0 : geo.city) || "" });
@@ -284,9 +265,9 @@
       return amapReady;
     }
     async function searchNearby(lat, lng) {
-      const AMap2 = await waitForAMap();
+      const AMap = await waitForAMap();
       return new Promise((resolve, reject) => {
-        const placeSearch = new AMap2.PlaceSearch({
+        const placeSearch = new AMap.PlaceSearch({
           city: "全国",
           citylimit: false,
           pageSize: 50,
@@ -308,9 +289,9 @@
       });
     }
     async function reverseGeocode(lat, lng, signal) {
-      const AMap2 = await waitForAMap();
+      const AMap = await waitForAMap();
       return new Promise((resolve, reject) => {
-        const geocoder = new AMap2.Geocoder({
+        const geocoder = new AMap.Geocoder({
           extensions: "base"
         });
         if (signal) {
@@ -332,9 +313,9 @@
       });
     }
     async function geocode(address) {
-      const AMap2 = await waitForAMap();
+      const AMap = await waitForAMap();
       return new Promise((resolve, reject) => {
-        const geocoder = new AMap2.Geocoder({
+        const geocoder = new AMap.Geocoder({
           city: "",
           // 全国
           extensions: "base"
@@ -358,9 +339,9 @@
       });
     }
     async function searchByKeyword(lat, lng, keyword) {
-      const AMap2 = await waitForAMap();
+      const AMap = await waitForAMap();
       return new Promise((resolve, reject) => {
-        const placeSearch = new AMap2.PlaceSearch({
+        const placeSearch = new AMap.PlaceSearch({
           city: "全国",
           citylimit: false,
           pageSize: 50,
@@ -382,9 +363,9 @@
       });
     }
     async function searchAddress(keyword) {
-      const AMap2 = await waitForAMap();
+      const AMap = await waitForAMap();
       return new Promise((resolve, reject) => {
-        const placeSearch = new AMap2.PlaceSearch({
+        const placeSearch = new AMap.PlaceSearch({
           city: "",
           // 全国
           citylimit: false,
@@ -457,7 +438,7 @@
       isKeyConfigured
     };
   })();
-  window.AMap = AMapWrapper;
+  window.AMapAPI = AMapWrapper;
   const State = {
     phase: "init",
     // 'init' | 'locating' | 'loading' | 'list' | 'random' | 'error' | 'manual'
@@ -507,7 +488,7 @@
     State.phase = "loading";
     render();
     try {
-      const data = await AMap.searchNearby(loc.lat, loc.lng);
+      const data = await AMapAPI.searchNearby(loc.lat, loc.lng);
       if (!data || data.length === 0) {
         State.phase = "empty";
         render();
@@ -546,7 +527,7 @@
     try {
       const loc = await Locator.search(keyword.trim());
       State.location = loc;
-      const data = await AMap.searchNearby(loc.lat, loc.lng);
+      const data = await AMapAPI.searchNearby(loc.lat, loc.lng);
       if (!data || data.length === 0) {
         State.phase = "empty";
         render();
