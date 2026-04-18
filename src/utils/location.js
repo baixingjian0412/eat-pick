@@ -1,12 +1,12 @@
 /**
- * 定位模块 - IP 定位 + 浏览器 GPS 双轨竞速 + AbortController 取消无效请求
+ * 定位模块 - IP 定位 + 浏览器 GPS 双轨竞速
  */
 const Location = (() => {
   let currentPos = null;
   let currentAddr = '';
   let currentCity = '';
 
-  const MASTER_TIMEOUT = 15000; // 全局超时 15秒
+  const MASTER_TIMEOUT = 15000;
 
   async function get(askPermission = true) {
     // 1. 缓存优先
@@ -18,62 +18,66 @@ const Location = (() => {
       return { ...currentPos, address: currentAddr, city: currentCity };
     }
 
-    // 2. IP 定位 + 浏览器 GPS 竞速，先成功者赢
+    // 2. 启动定位竞速
     const controller = new AbortController();
-    
-    // 设置超时
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, MASTER_TIMEOUT);
+    const timeoutId = setTimeout(() => controller.abort(), MASTER_TIMEOUT);
 
     try {
-      const result = await _runRace(controller, askPermission);
+      // 创建定位 Promise 数组
+      const locationPromises = [];
+
+      // IP 定位
+      locationPromises.push(
+        _amapIpLocate(controller.signal)
+          .then(r => ({ source: 'ip', data: r }))
+          .catch(e => ({ source: 'ip', error: e }))
+      );
+
+      // GPS 定位（如果有）
+      if (navigator.geolocation) {
+        locationPromises.push(
+          _browserGeolocateWithRetry(askPermission ? 2 : 0, controller.signal)
+            .then(r => ({ source: 'gps', data: r }))
+            .catch(e => ({ source: 'gps', error: e }))
+        );
+      }
+
+      // 等待第一个成功的结果
+      let winner = null;
+      
+      for (const p of locationPromises) {
+        const result = await p;
+        if (result.data) {
+          winner = result;
+          break;
+        }
+      }
+
       clearTimeout(timeoutId);
-      return result;
+      controller.abort();
+
+      if (!winner || !winner.data) {
+        throw new Error('LOCATION_FAILED');
+      }
+
+      const data = winner.data;
+      currentPos = { lat: data.lat, lng: data.lng };
+      currentAddr = data.address || '';
+      currentCity = data.city || '';
+      _saveCache();
+      return { ...currentPos, address: currentAddr, city: currentCity };
+
     } catch (err) {
       clearTimeout(timeoutId);
       controller.abort();
-      throw err;
-    }
-  }
-
-  // 竞速逻辑
-  async function _runRace(controller, askPermission) {
-    // 立即启动 IP 定位（无网络延迟，结果即用）
-    const ipTask = _amapIpLocate(controller.signal).catch(e => ({ _err: e }));
-
-    // 浏览器 GPS 同步启动（异步结果）
-    const gpsTask = navigator.geolocation
-      ? _browserGeolocateWithRetry(askPermission ? 2 : 0, controller.signal).catch(e => ({ _err: e }))
-      : Promise.resolve({ _err: new Error('NO_GPS') });
-
-    // 两个方法谁先返回有效结果谁赢
-    let winner;
-    try {
-      winner = await Promise.any([ipTask, gpsTask]);
-    } catch (anyErr) {
-      // Promise.any 如果全部失败会抛出 AggregateError
-      throw new Error('LOCATION_FAILED');
-    }
-
-    // 竞速结束，取消另一方
-    controller.abort();
-
-    if (winner._err) {
-      if (winner._err.message === 'PERMISSION_DENIED') {
+      if (err.message === 'PERMISSION_DENIED') {
         throw new Error('PERMISSION_DENIED');
       }
-      if (winner._err.message === 'ABORTED') {
+      if (err.message === 'TIMEOUT' || err.message === 'ABORTED') {
         throw new Error('TIMEOUT');
       }
       throw new Error('LOCATION_FAILED');
     }
-
-    currentPos = { lat: winner.lat, lng: winner.lng };
-    currentAddr = winner.address || '';
-    currentCity = winner.city || '';
-    _saveCache();
-    return { ...currentPos, address: currentAddr, city: currentCity };
   }
 
   async function search(keyword) {
@@ -101,21 +105,23 @@ const Location = (() => {
   }
 
   function _saveCache() {
-    Storage.saveLocationCache({
-      lat: currentPos.lat, lng: currentPos.lng,
-      address: currentAddr, city: currentCity
-    });
+    if (currentPos) {
+      Storage.saveLocationCache({
+        lat: currentPos.lat, lng: currentPos.lng,
+        address: currentAddr, city: currentCity
+      });
+    }
   }
 
   // 高德 IP 定位
   async function _amapIpLocate(signal) {
     const resp = await fetch(
       `https://restapi.amap.com/v3/ip?key=${AMap.getApiKey()}`,
-      { signal, mode: 'cors' }
+      signal ? { signal } : {}
     );
     const data = await resp.json();
     if (data.status !== '1' || !data.rectangle) {
-      throw new Error(data.info || 'IP定位无坐标');
+      throw new Error('IP定位无数据');
     }
     const [sw, ne] = data.rectangle.split(';');
     const [slng, slat] = sw.split(',').map(Number);
@@ -123,7 +129,6 @@ const Location = (() => {
     const centerLat = (slat + nlat) / 2;
     const centerLng = (slng + nlng) / 2;
 
-    // 逆地理编码也带 abort 信号
     const geo = await AMap.reverseGeocode(centerLat, centerLng, signal);
 
     return {
@@ -133,63 +138,53 @@ const Location = (() => {
     };
   }
 
-  // 浏览器 GPS + 逆地理编码
+  // 浏览器 GPS
   function _browserGeolocateWithRetry(retries = 1, signal) {
     return new Promise((resolve, reject) => {
-      // 检查是否已经被中止
-      if (signal?.aborted) { 
-        reject(new Error('ABORTED')); 
-        return; 
+      if (signal?.aborted) {
+        reject(new Error('ABORTED'));
+        return;
       }
 
       let attempts = 0;
-      
+
       function attempt() {
-        // 再次检查中止状态
-        if (signal?.aborted) { 
-          reject(new Error('ABORTED')); 
-          return; 
+        if (signal?.aborted) {
+          reject(new Error('ABORTED'));
+          return;
         }
-        
+
         attempts++;
+        
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
-            
-            // 如果已经中止，直接返回
-            if (signal?.aborted) { 
-              reject(new Error('ABORTED')); 
-              return; 
+
+            if (signal?.aborted) {
+              reject(new Error('ABORTED'));
+              return;
             }
-            
+
             try {
-              // 添加短暂超时防止 reverseGeocode 无限等待
-              const geoPromise = AMap.reverseGeocode(lat, lng, signal);
-              const timeoutPromise = new Promise((_, r) => 
-                setTimeout(() => r(new Error('GEO_TIMEOUT')), 5000)
-              );
-              
-              const geo = await Promise.race([geoPromise, timeoutPromise]);
-              resolve({ 
-                lat, lng, 
-                address: geo?.formattedAddress || '', 
-                city: geo?.city || '' 
-              });
+              const geo = await Promise.race([
+                AMap.reverseGeocode(lat, lng, signal),
+                new Promise((_, r) => setTimeout(() => r(new Error('GEO_TIMEOUT')), 5000))
+              ]);
+              resolve({ lat, lng, address: geo?.formattedAddress || '', city: geo?.city || '' });
             } catch (e) {
-              // reverseGeocode 失败也返回基本坐标
               resolve({ lat, lng, address: '', city: '' });
             }
           },
           (err) => {
-            if (signal?.aborted) { 
-              reject(new Error('ABORTED')); 
-              return; 
+            if (signal?.aborted) {
+              reject(new Error('ABORTED'));
+              return;
             }
-            if (retries > 0) { 
-              retries--; 
-              setTimeout(attempt, 1500); 
-              return; 
+            if (retries > 0) {
+              retries--;
+              setTimeout(attempt, 1500);
+              return;
             }
             switch (err.code) {
               case 1: reject(new Error('PERMISSION_DENIED')); break;
@@ -201,14 +196,11 @@ const Location = (() => {
           { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
         );
       }
-      
-      // 监听中止事件
+
       if (signal) {
-        signal.addEventListener('abort', () => {
-          reject(new Error('ABORTED'));
-        });
+        signal.addEventListener('abort', () => reject(new Error('ABORTED')));
       }
-      
+
       attempt();
     });
   }
