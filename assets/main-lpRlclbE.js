@@ -267,19 +267,31 @@
       { id: "11", name: "肯德基", address: "朝阳区建国路180号", type: "快餐", tel: "010-65798888", rating: "4.1", distance: "5.2km", photo: "", lat: 39.91, lng: 116.44 },
       { id: "12", name: "必胜客", address: "朝阳区建国路190号", type: "披萨", tel: "010-65788888", rating: "4.3", distance: "5.5km", photo: "", lat: 39.91, lng: 116.44 }
     ];
-    function shuffleArray(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    function pseudoRandom(lat, lng) {
+      const key = `${lat.toFixed(2)}${lng.toFixed(2)}`;
+      let hash = 0;
+      for (let i = 0; i < key.length; i++) {
+        hash = (hash << 5) - hash + key.charCodeAt(i);
+        hash = hash & hash;
       }
-      return array;
+      return Math.abs(hash);
     }
     async function searchNearby(lat, lng) {
+      const seed = pseudoRandom(lat, lng);
+      const random = () => {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      };
       return new Promise((resolve) => {
         setTimeout(() => {
-          const shuffled = shuffleArray([...mockRestaurants]);
-          resolve(shuffled);
-        }, 500);
+          const shuffled = [...mockRestaurants].sort(() => random() - 0.5);
+          const result = shuffled.slice(0, 8 + Math.floor(random() * 5)).map((r, i) => ({
+            ...r,
+            id: `${lat}${lng}${i}`,
+            distance: `${(Math.random() * 4 + 0.5).toFixed(1)}km`
+          }));
+          resolve(result);
+        }, 300);
       });
     }
     async function reverseGeocode(lat, lng, signal) {
@@ -293,13 +305,22 @@
       });
     }
     async function geocode(address) {
+      const hash = address.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+      const lat = 39.8 + hash % 50 / 100;
+      const lng = 116.2 + hash % 60 / 100;
+      let city = "北京市";
+      if (address.includes("上海")) city = "上海市";
+      else if (address.includes("广州")) city = "广州市";
+      else if (address.includes("深圳")) city = "深圳市";
+      else if (address.includes("杭州")) city = "杭州市";
+      else if (address.includes("成都")) city = "成都市";
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve([{
-            lat: 39.91,
-            lng: 116.44,
-            formattedAddress: address,
-            city: "北京市"
+            lat,
+            lng,
+            formattedAddress: city + address,
+            city
           }]);
         }, 200);
       });
