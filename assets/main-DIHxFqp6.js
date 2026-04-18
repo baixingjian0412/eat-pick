@@ -263,130 +263,172 @@
   })();
   window.RandomPicker = RandomPicker$1;
   const AMapWrapper = /* @__PURE__ */ (() => {
-    const API_KEY = "19dab2fef285a816ec8779e835984820";
     const RADIUS = 5e3;
-    function jsonp(url) {
-      return new Promise((resolve, reject) => {
-        const callbackName = "jsonp_" + Math.random().toString(36).substr(2, 9);
-        const script = document.createElement("script");
-        window[callbackName] = (data) => {
-          delete window[callbackName];
-          script.remove();
-          resolve(data);
+    let amapReady = null;
+    function waitForAMap() {
+      if (amapReady) return amapReady;
+      amapReady = new Promise((resolve) => {
+        const check = () => {
+          if (window.AMap) {
+            resolve(window.AMap);
+          } else {
+            setTimeout(check, 100);
+          }
         };
-        script.onerror = () => {
-          delete window[callbackName];
-          script.remove();
-          reject(new Error("JSONP请求失败"));
-        };
-        const separator = url.includes("?") ? "&" : "?";
-        script.src = url + separator + "callback=" + callbackName;
-        document.head.appendChild(script);
+        check();
       });
+      return amapReady;
     }
     async function searchNearby(lat, lng) {
-      const url = `https://restapi.amap.com/v3/place/around?key=${API_KEY}&location=${lng},${lat}&radius=${RADIUS}&types=050000&offset=20&page=1&extensions=all`;
-      const data = await jsonp(url);
-      if (data.status !== "1") {
-        throw new Error(data.info || "获取周边美食失败");
-      }
-      const pois = data.pois || [];
-      if (pois.length === 0) {
-        return [];
-      }
-      return pois.map((poi) => {
-        let distance = "";
-        if (poi.distance) {
-          const d = parseInt(poi.distance);
-          distance = d >= 1e3 ? `${(d / 1e3).toFixed(1)}km` : `${d}m`;
-        }
-        let photo = "";
-        if (poi.photos && poi.photos.length > 0) {
-          photo = poi.photos[0].url || "";
-        }
-        return {
-          id: poi.id,
-          name: poi.name,
-          address: poi.address || "",
-          type: poi.type || "",
-          tel: poi.tel || "",
-          rating: "",
-          distance,
-          photo,
-          lat: poi.location ? poi.location.split(",")[1] : "",
-          lng: poi.location ? poi.location.split(",")[0] : ""
-        };
+      const AMap = await waitForAMap();
+      return new Promise((resolve, reject) => {
+        const MSearch = new AMap.PlaceSearch({
+          city: "全国",
+          citylimit: false,
+          pageSize: 50,
+          pageIndex: 1,
+          extensions: "all",
+          radius: RADIUS,
+          type: "餐饮服务"
+        });
+        MSearch.searchNearBy("", [lng, lat], RADIUS, (status, result) => {
+          if (status === "complete" && result.poiList) {
+            const pois = result.poiList.pois || [];
+            resolve(pois.map((poi) => {
+              var _a, _b, _c;
+              return {
+                id: poi.id,
+                name: poi.name,
+                address: poi.address || "",
+                type: poi.type || "",
+                tel: poi.tel || "",
+                rating: ((_a = poi.bizExt) == null ? void 0 : _a.rating) || "",
+                distance: poi.distance || "",
+                photo: ((_c = (_b = poi.photos) == null ? void 0 : _b[0]) == null ? void 0 : _c.url) || "",
+                lat: poi.location ? poi.location.lat : "",
+                lng: poi.location ? poi.location.lng : ""
+              };
+            }));
+          } else if (status === "no_data") {
+            resolve([]);
+          } else {
+            reject(new Error((result == null ? void 0 : result.info) || "获取周边美食失败"));
+          }
+        });
       });
     }
     async function reverseGeocode(lat, lng, signal) {
-      const url = `https://restapi.amap.com/v3/geocode/regeo?key=${API_KEY}&location=${lng},${lat}&extensions=base`;
-      const data = await jsonp(url);
-      if (data.status !== "1" || !data.regeocode) {
-        throw new Error("地址解析失败");
-      }
-      const rc = data.regeocode;
-      return {
-        formattedAddress: rc.formattedAddress || "",
-        city: rc.addressComponent && rc.addressComponent.city || rc.addressComponent && rc.addressComponent.province || ""
-      };
+      const AMap = await waitForAMap();
+      return new Promise((resolve, reject) => {
+        const geocoder = new AMap.Geocoder({
+          extensions: "base"
+        });
+        geocoder.getAddress([lng, lat], (status, result) => {
+          var _a, _b;
+          if (status === "complete" && result.regeocode) {
+            const rc = result.regeocode;
+            resolve({
+              formattedAddress: rc.formattedAddress || "",
+              city: ((_a = rc.addressComponent) == null ? void 0 : _a.city) || ((_b = rc.addressComponent) == null ? void 0 : _b.province) || ""
+            });
+          } else {
+            reject(new Error((result == null ? void 0 : result.info) || "地址解析失败"));
+          }
+        });
+      });
     }
     async function geocode(address) {
-      const url = `https://restapi.amap.com/v3/geocode/geo?key=${API_KEY}&address=${encodeURIComponent(address)}&city=&extensions=base`;
-      const data = await jsonp(url);
-      if (data.status !== "1" || !data.geocodes || data.geocodes.length === 0) {
-        return [];
-      }
-      return data.geocodes.map((g) => {
-        const [lng, lat] = g.location.split(",").map(Number);
-        return {
-          lat,
-          lng,
-          formattedAddress: g.formattedAddress || g.address || address,
-          city: g.city || ""
-        };
+      const AMap = await waitForAMap();
+      return new Promise((resolve, reject) => {
+        const geocoder = new AMap.Geocoder({
+          extensions: "base"
+        });
+        geocoder.getLocation(address, (status, result) => {
+          if (status === "complete" && result.geocodes && result.geocodes.length > 0) {
+            const g = result.geocodes[0];
+            resolve([{
+              lat: g.location.lat,
+              lng: g.location.lng,
+              formattedAddress: g.formattedAddress || address,
+              city: g.city || ""
+            }]);
+          } else {
+            resolve([]);
+          }
+        });
       });
     }
     async function searchByKeyword(lat, lng, keyword) {
-      const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=050000&city=&citylimit=false&offset=20&page=1&extensions=all`;
-      const data = await jsonp(url);
-      if (data.status !== "1") {
-        throw new Error(data.info || "搜索失败");
-      }
-      const pois = data.pois || [];
-      return pois.map((poi) => ({
-        id: poi.id,
-        name: poi.name,
-        address: poi.address || "",
-        type: poi.type || "",
-        tel: poi.tel || "",
-        rating: "",
-        distance: "",
-        photo: "",
-        lat: poi.location ? poi.location.split(",")[1] : "",
-        lng: poi.location ? poi.location.split(",")[0] : ""
-      }));
+      const AMap = await waitForAMap();
+      return new Promise((resolve, reject) => {
+        const placeSearch = new AMap.PlaceSearch({
+          city: "全国",
+          citylimit: false,
+          pageSize: 50,
+          pageIndex: 1,
+          extensions: "all",
+          type: "餐饮服务"
+        });
+        placeSearch.search(keyword, (status, result) => {
+          if (status === "complete" && result.poiList) {
+            const pois = result.poiList.pois || [];
+            resolve(pois.map((poi) => {
+              var _a, _b, _c;
+              return {
+                id: poi.id,
+                name: poi.name,
+                address: poi.address || "",
+                type: poi.type || "",
+                tel: poi.tel || "",
+                rating: ((_a = poi.bizExt) == null ? void 0 : _a.rating) || "",
+                distance: "",
+                photo: ((_c = (_b = poi.photos) == null ? void 0 : _b[0]) == null ? void 0 : _c.url) || "",
+                lat: poi.location ? poi.location.lat : "",
+                lng: poi.location ? poi.location.lng : ""
+              };
+            }));
+          } else if (status === "no_data") {
+            resolve([]);
+          } else {
+            reject(new Error((result == null ? void 0 : result.info) || "搜索失败"));
+          }
+        });
+      });
     }
     async function searchAddress(keyword) {
-      const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=&city=&citylimit=false&offset=20&page=1&extensions=base`;
-      const data = await jsonp(url);
-      if (data.status !== "1") {
-        throw new Error(data.info || "地址搜索失败");
-      }
-      const pois = data.pois || [];
-      return pois.map((poi) => ({
-        id: poi.id,
-        name: poi.name,
-        address: poi.address || "",
-        lat: poi.location ? poi.location.split(",")[1] : "",
-        lng: poi.location ? poi.location.split(",")[0] : "",
-        city: poi.city || ""
-      }));
+      const AMap = await waitForAMap();
+      return new Promise((resolve, reject) => {
+        const placeSearch = new AMap.PlaceSearch({
+          city: "全国",
+          citylimit: false,
+          pageSize: 20,
+          pageIndex: 1,
+          extensions: "base"
+        });
+        placeSearch.search(keyword, (status, result) => {
+          if (status === "complete" && result.poiList) {
+            const pois = result.poiList.pois || [];
+            resolve(pois.map((poi) => ({
+              id: poi.id,
+              name: poi.name,
+              address: poi.address || "",
+              lat: poi.location ? poi.location.lat : "",
+              lng: poi.location ? poi.location.lng : "",
+              city: poi.city || ""
+            })));
+          } else if (status === "no_data") {
+            resolve([]);
+          } else {
+            reject(new Error((result == null ? void 0 : result.info) || "地址搜索失败"));
+          }
+        });
+      });
     }
     function getApiKey() {
-      return API_KEY;
+      return "19dab2fef285a816ec8779e835984820";
     }
     function isKeyConfigured() {
-      return API_KEY !== "";
+      return true;
     }
     return {
       searchNearby,
