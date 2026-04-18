@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node fix-script.cjs",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "replace": "^1.2.2",
     "vite": "^5.0.0"
   }
 }
