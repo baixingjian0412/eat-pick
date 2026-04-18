@@ -446,4 +446,3 @@ window.onManualSubmit = onManualSubmit;
 window.pickSingle = pickSingle;
 window.showToast = showToast;
 window.refreshData = refreshData;
-window.Locator = Location;
