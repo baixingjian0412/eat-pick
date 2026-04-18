@@ -72,7 +72,8 @@ async function _loadWithLocation(loc) {
     render();
   } catch (err) {
     State.phase = 'error';
-    State.errorMsg = err.message || '加载失败，请重试';
+    State.errorMsg = '加载失败: ' + (err.message || err.toString() || '未知错误');
+    console.error('加载错误:', err);
     render();
   }
 }
@@ -115,7 +116,8 @@ async function onSearchSubmit(keyword) {
     State.phase = 'list';
   } catch (err) {
     State.phase = 'error';
-    State.errorMsg = err.message || '搜索失败';
+    State.errorMsg = '搜索失败: ' + (err.message || err.toString() || '未知错误');
+    console.error('搜索错误:', err);
   }
   State.isLoading = false;
   render();
