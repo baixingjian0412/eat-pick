@@ -88,7 +88,25 @@
       }
     }
     async function _amapIpLocate(signal) {
-      throw new Error("IP定位暂不可用");
+      const url = `https://restapi.amap.com/v3/ip?key=${AMapAPI.getApiKey()}`;
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+      const resp = await fetch(proxyUrl, signal ? { signal } : {});
+      const data = await resp.json();
+      if (data.status !== "1" || !data.rectangle) {
+        throw new Error("IP定位无数据");
+      }
+      const [sw, ne] = data.rectangle.split(";");
+      const [slng, slat] = sw.split(",").map(Number);
+      const [nlng, nlat] = ne.split(",").map(Number);
+      const centerLat = (slat + nlat) / 2;
+      const centerLng = (slng + nlng) / 2;
+      const geo = await AMapAPI.reverseGeocode(centerLat, centerLng, signal);
+      return {
+        lat: centerLat,
+        lng: centerLng,
+        address: geo.formattedAddress || data.province + data.city,
+        city: data.city || ""
+      };
     }
     function _browserGeolocateWithRetry(retries = 1, signal) {
       return new Promise((resolve, reject) => {
