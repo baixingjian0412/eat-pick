@@ -265,7 +265,7 @@
   const AMapWrapper = /* @__PURE__ */ (() => {
     const API_KEY = "19dab2fef285a816ec8779e835984820";
     const RADIUS = 5e3;
-    const CORS_PROXY = "https://corsproxy.io/?";
+    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
     async function _fetchWithProxy(url) {
       const proxyUrl = CORS_PROXY + encodeURIComponent(url);
       const resp = await fetch(proxyUrl);
