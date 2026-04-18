@@ -57,16 +57,23 @@
       }
     }
     async function search(keyword) {
-      const result = await AMapAPI.geocode(keyword);
-      if (!result || result.length === 0) {
-        throw new Error("未找到匹配的地址，请尝试更具体的描述");
+      console.log("Locator.search called", keyword);
+      try {
+        const result = await AMapAPI.geocode(keyword);
+        console.log("geocode result", result);
+        if (!result || result.length === 0) {
+          throw new Error("未找到匹配的地址，请尝试更具体的描述");
+        }
+        const item = result[0];
+        currentPos = { lat: item.lat, lng: item.lng };
+        currentAddr = item.formattedAddress || keyword;
+        currentCity = item.city || "";
+        _saveCache();
+        return { ...currentPos, address: currentAddr, city: currentCity };
+      } catch (e) {
+        console.error("Locator.search error", e);
+        throw e;
       }
-      const item = result[0];
-      currentPos = { lat: item.lat, lng: item.lng };
-      currentAddr = item.formattedAddress || keyword;
-      currentCity = item.city || "";
-      _saveCache();
-      return { ...currentPos, address: currentAddr, city: currentCity };
     }
     function getCurrent() {
       return currentPos ? { ...currentPos, address: currentAddr, city: currentCity } : null;
@@ -435,9 +442,17 @@
     State.randomResult = null;
     render();
     try {
-      const loc = await Locator.search(keyword.trim());
+      const loc = await Promise.race([
+        Locator.search(keyword.trim()),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("搜索地址超时")), 5e3))
+      ]);
+      console.log("地址定位成功", loc);
       State.location = loc;
-      const data = await AMapAPI.searchNearby(loc.lat, loc.lng);
+      const data = await Promise.race([
+        AMapAPI.searchNearby(loc.lat, loc.lng),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("搜索餐厅超时")), 5e3))
+      ]);
+      console.log("餐厅搜索成功", data.length, "条");
       if (!data || data.length === 0) {
         State.phase = "empty";
         render();
@@ -448,9 +463,9 @@
       RandomPicker.init(data);
       State.phase = "list";
     } catch (err) {
+      console.error("搜索错误:", err);
       State.phase = "error";
       State.errorMsg = "搜索失败: " + (err.message || err.toString() || "未知错误");
-      console.error("搜索错误:", err);
     }
     State.isLoading = false;
     render();
