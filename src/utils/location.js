@@ -113,12 +113,30 @@ const Location = (() => {
     }
   }
 
-  // 高德 IP 定位（使用浏览器 GPS 作为后备）
-  // 注意：IP 定位需要后端代理，这里暂时跳过，直接用 GPS
+  // 高德 IP 定位
   async function _amapIpLocate(signal) {
-    // IP 定位使用 REST API 会遇到 CORS 问题，暂时跳过
-    // 如果需要 IP 定位，需要搭建代理服务器
-    throw new Error('IP定位暂不可用');
+    const url = `https://restapi.amap.com/v3/ip?key=${AMapAPI.getApiKey()}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    
+    const resp = await fetch(proxyUrl, signal ? { signal } : {});
+    const data = await resp.json();
+    
+    if (data.status !== '1' || !data.rectangle) {
+      throw new Error('IP定位无数据');
+    }
+    const [sw, ne] = data.rectangle.split(';');
+    const [slng, slat] = sw.split(',').map(Number);
+    const [nlng, nlat] = ne.split(',').map(Number);
+    const centerLat = (slat + nlat) / 2;
+    const centerLng = (slng + nlng) / 2;
+
+    const geo = await AMapAPI.reverseGeocode(centerLat, centerLng, signal);
+
+    return {
+      lat: centerLat, lng: centerLng,
+      address: geo.formattedAddress || data.province + data.city,
+      city: data.city || ''
+    };
   }
 
   // 浏览器 GPS
