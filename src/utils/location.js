@@ -208,4 +208,4 @@ const Location = (() => {
   return { get, search, getCurrent, clearCache };
 })();
 
-window.Location = Location;
+window.Locator = Location;
