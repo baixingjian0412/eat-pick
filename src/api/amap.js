@@ -259,5 +259,5 @@ const AMapWrapper = (() => {
   };
 })();
 
-// 暴露全局变量
-window.AMap = AMapWrapper;
+// 暴露全局变量（注意：不能用 AMap，会覆盖高德原生 API）
+window.AMapAPI = AMapWrapper;

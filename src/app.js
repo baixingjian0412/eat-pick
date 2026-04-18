@@ -57,7 +57,7 @@ async function _loadWithLocation(loc) {
   render();
 
   try {
-    const data = await AMap.searchNearby(loc.lat, loc.lng);
+    const data = await AMapAPI.searchNearby(loc.lat, loc.lng);
     if (!data || data.length === 0) {
       State.phase = 'empty';
       render();
@@ -101,7 +101,7 @@ async function onSearchSubmit(keyword) {
     // 先搜索地址
     const loc = await Locator.search(keyword.trim());
     State.location = loc;
-    const data = await AMap.searchNearby(loc.lat, loc.lng);
+    const data = await AMapAPI.searchNearby(loc.lat, loc.lng);
     if (!data || data.length === 0) {
       State.phase = 'empty';
       render();

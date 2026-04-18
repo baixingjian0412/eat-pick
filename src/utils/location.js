@@ -81,7 +81,7 @@ const Location = (() => {
   }
 
   async function search(keyword) {
-    const result = await AMap.geocode(keyword);
+    const result = await AMapAPI.geocode(keyword);
     if (!result || result.length === 0) {
       throw new Error('未找到匹配的地址，请尝试更具体的描述');
     }
@@ -113,29 +113,12 @@ const Location = (() => {
     }
   }
 
-  // 高德 IP 定位
+  // 高德 IP 定位（使用浏览器 GPS 作为后备）
+  // 注意：IP 定位需要后端代理，这里暂时跳过，直接用 GPS
   async function _amapIpLocate(signal) {
-    const resp = await fetch(
-      `https://restapi.amap.com/v3/ip?key=${AMap.getApiKey()}`,
-      signal ? { signal } : {}
-    );
-    const data = await resp.json();
-    if (data.status !== '1' || !data.rectangle) {
-      throw new Error('IP定位无数据');
-    }
-    const [sw, ne] = data.rectangle.split(';');
-    const [slng, slat] = sw.split(',').map(Number);
-    const [nlng, nlat] = ne.split(',').map(Number);
-    const centerLat = (slat + nlat) / 2;
-    const centerLng = (slng + nlng) / 2;
-
-    const geo = await AMap.reverseGeocode(centerLat, centerLng, signal);
-
-    return {
-      lat: centerLat, lng: centerLng,
-      address: geo.formattedAddress || data.province + data.city,
-      city: data.city || ''
-    };
+    // IP 定位使用 REST API 会遇到 CORS 问题，暂时跳过
+    // 如果需要 IP 定位，需要搭建代理服务器
+    throw new Error('IP定位暂不可用');
   }
 
   // 浏览器 GPS
@@ -168,7 +151,7 @@ const Location = (() => {
 
             try {
               const geo = await Promise.race([
-                AMap.reverseGeocode(lat, lng, signal),
+                AMapAPI.reverseGeocode(lat, lng, signal),
                 new Promise((_, r) => setTimeout(() => r(new Error('GEO_TIMEOUT')), 5000))
               ]);
               resolve({ lat, lng, address: geo?.formattedAddress || '', city: geo?.city || '' });
