@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吃什么 - 帮你解决选择困难</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#F7F8FA;--bg-card:#FFFFFF;--bg-hover:#F0F2F5;
+      --primary:#FF7043;--primary-light:#FFF3E0;--primary-dark:#E64A19;
+      --text:#1D1D1F;--text-secondary:#86868B;--text-light:#AEAEB2;
+      --border:#E5E5EA;--shadow:0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+      --radius:16px;--radius-sm:10px;
+      --font:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;
+    }
+    html{font-size:16px;-webkit-tap-highlight-color:transparent}
+    body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;overflow-x:hidden}
+
+    /* Header */
+    .header{position:sticky;top:0;z-index:100;background:rgba(247,248,250,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 20px}
+    .header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .logo{display:flex;align-items:center;gap:8px;font-size:1.25rem;font-weight:700;white-space:nowrap}
+    .logo-icon{font-size:1.5rem}
+    .header-actions{display:flex;gap:8px;align-items:center}
+    .location-badge{display:flex;align-items:center;gap:4px;font-size:0.8rem;color:var(--text-secondary);background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:4px 12px;cursor:pointer;transition:all .2s;max-width:200px;overflow:hidden}
+    .location-badge:hover{border-color:var(--primary);color:var(--primary)}
+    .location-badge .loc-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:500;cursor:pointer;transition:all .2s;font-family:var(--font)}
+    .btn-icon{width:36px;height:36px;padding:0;justify-content:center;border-radius:50%;background:var(--bg-card);border:1px solid var(--border)}
+    .btn-icon:hover{border-color:var(--primary);color:var(--primary)}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:var(--shadow)}
+    .btn-primary:active{transform:translateY(0)}
+
+    /* Main Content */
+    .main{max-width:960px;margin:0 auto;padding:20px}
+
+    /* Hero / Permission */
+    .hero{text-align:center;padding:60px 20px;animation:fadeUp .5s ease}
+    .hero-icon{font-size:4rem;margin-bottom:16px}
+    .hero h1{font-size:1.75rem;font-weight:700;margin-bottom:8px}
+    .hero p{color:var(--text-secondary);font-size:0.95rem;max-width:400px;margin:0 auto 24px}
+    .hero .btn-primary{font-size:1rem;padding:12px 32px;border-radius:28px}
+
+    /* Permission Modal */
+    .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
+    .modal{background:var(--bg-card);border-radius:var(--radius);padding:32px;max-width:400px;width:100%;box-shadow:var(--shadow-lg);animation:scaleIn .3s ease}
+    .modal h3{font-size:1.1rem;margin-bottom:12px}
+    .modal p{font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;line-height:1.7}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+    .modal-actions .btn{padding:8px 20px}
+    .btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border)}
+    .btn-ghost:hover{background:var(--bg-hover)}
+    /* 固定随机按钮 */
+    .btn-float-random{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:none;border-radius:32px;background:var(--primary);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,107,0.4);transition:all .25s;font-family:var(--font)}
+    .btn-float-random:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:0 6px 24px rgba(255,107,107,0.5)}
+    .btn-float-random:active{transform:translateY(0)}
+    @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+    /* Search Bar */
+    .search-section{margin-bottom:20px;animation:fadeUp .4s ease}
+    .search-box{display:flex;gap:10px;align-items:center}
+    .search-input{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:var(--font);background:var(--bg-card);transition:all .2s;outline:none}
+    .search-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+    .search-input::placeholder{color:var(--text-light)}
+
+    /* Category Tabs */
+    .category-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 16px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .category-tabs::-webkit-scrollbar{display:none}
+    .cat-tab{padding:6px 16px;border-radius:20px;font-size:0.8rem;white-space:nowrap;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:all .2s;font-family:var(--font)}
+    .cat-tab:hover,.cat-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+    /* Restaurant Grid */
+    .restaurant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .restaurant-card{background:var(--bg-card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:all .3s;cursor:pointer;animation:fadeUp .4s ease backwards}
+    .restaurant-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+    .card-img{width:100%;height:160px;object-fit:cover;background:var(--bg-hover)}
+    .card-img-placeholder{width:100%;height:160px;background:linear-gradient(135deg,#FFECD2,#FCB69F);display:flex;align-items:center;justify-content:center;font-size:2.5rem}
+    .card-body{padding:14px}
+    .card-name{font-size:0.95rem;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .card-info{display:flex;align-items:center;gap:12px;font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px}
+    .card-info .rating{color:var(--primary);font-weight:700}
+    .card-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.72rem;background:var(--primary-light);color:var(--primary);margin-right:4px}
+    .card-distance{font-size:0.78rem;color:var(--text-light)}
+
+    /* Random Result Card */
+    .random-result{text-align:center;padding:40px 20px;animation:scaleIn .4s ease}
+    .random-label{font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px}
+    .random-restaurant{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow-lg);max-width:360px;margin:0 auto;overflow:hidden}
+    .random-img{width:100%;height:200px;object-fit:cover;background:var(--bg-hover)}
+    .random-img-placeholder{width:100%;height:200px;background:linear-gradient(135deg,#a18cd1,#fbc2eb);display:flex;align-items:center;justify-content:center;font-size:3rem}
+    .random-body{padding:24px}
+    .random-name{font-size:1.3rem;font-weight:700;margin-bottom:12px}
+    .random-details{display:flex;justify-content:center;gap:20px;font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px}
+    .random-details .val{color:var(--text);font-weight:700}
+    .random-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+    /* Loading */
+    .loading-container{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+    .loading-text{font-size:0.85rem;color:var(--text-secondary)}
+
+    /* Empty State */
+    .empty{text-align:center;padding:60px 20px;color:var(--text-secondary)}
+    .empty-icon{font-size:3rem;margin-bottom:12px;opacity:.5}
+    .empty h3{font-size:1rem;margin-bottom:4px;color:var(--text)}
+    .empty p{font-size:0.85rem}
+
+    /* Toast */
+    .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:300;background:var(--text);color:#fff;padding:10px 20px;border-radius:var(--radius-sm);font-size:0.85rem;box-shadow:var(--shadow-lg);animation:slideDown .3s ease;pointer-events:none}
+    .toast.error{background:#FF3B30}
+    .toast.success{background:#34C759}
+
+    /* Footer */
+    .footer{text-align:center;padding:32px 20px;font-size:0.78rem;color:var(--text-light);border-top:1px solid var(--border);margin-top:40px}
+    .footer p{margin-bottom:4px}
+
+    /* Animations */
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+    @keyframes slideDown{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Responsive */
+    @media(max-width:640px){
+      .header{padding:10px 16px}
+      .main{padding:16px}
+      .hero{padding:40px 16px}
+      .hero h1{font-size:1.35rem}
+      .restaurant-grid{grid-template-columns:1fr;gap:12px}
+      .location-badge{max-width:120px;font-size:0.72rem;padding:3px 8px}
+      .random-restaurant{margin:0 10px}
+      .modal{padding:24px;margin:0 12px}
+      .card-img,.card-img-placeholder{height:140px}
+      .random-img,.random-img-placeholder{height:160px}
+    }
+    @media(min-width:641px) and (max-width:960px){
+      .restaurant-grid{grid-template-columns:repeat(2,1fr)}
+    }
+    @media(min-width:961px){
+      .restaurant-grid{grid-template-columns:repeat(3,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast -->
+  <div id="toast" class="toast" style="display:none"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🍽️</span>
+        <span>吃什么</span>
+      </div>
+      <div class="header-actions">
+        <div class="location-badge" id="locationBadge" style="display:none" onclick="showAddressModal()">
+          <span>📍</span>
+          <span class="loc-text" id="locText">定位中...</span>
+        </div>
+        <button class="btn btn-icon" onclick="refreshData()" title="刷新">🔄</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main" id="app"></main>
+
+  <!-- 固定随机按钮 -->
+  <div id="randomBtnWrap" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;animation:fadeUp .4s ease">
+    <button class="btn-float-random" onclick="onRandomPick()" title="随机选一个">
+      🎲 随机决定
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>本网站聚合周边5公里美食，随机选择帮你解决吃饭选择困难 🎲</p>
+    <p>仅获取定位用于美食筛选，不收集、不泄露个人信息 · 隐私说明</p>
+  </footer>
+
+  <script type="module" src="src/utils/location-ui.js"></script>
+  <script type="module" src="src/utils/location.js"></script>
+  <script type="module" src="src/utils/storage.js"></script>
+  <script type="module" src="src/utils/random.js"></script>
+  <script type="module" src="src/api/amap.js"></script>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
