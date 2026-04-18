@@ -10,7 +10,7 @@ const AMapWrapper = (() => {
   const RADIUS = 5000; // 5公里
   
   // CORS 代理（使用公共代理服务）
-  const CORS_PROXY = 'https://corsproxy.io/?';
+  const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
   /**
    * 带 CORS 代理的 fetch
