@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ========== 定位流程 ==========
 async function _startLocation() {
   try {
-    State.location = await Location.get(true);
+    State.location = await Locator.get(true);
     await _loadWithLocation(State.location);
   } catch (err) {
     State.errorMsg = err.message === 'PERMISSION_DENIED'
@@ -99,7 +99,7 @@ async function onSearchSubmit(keyword) {
 
   try {
     // 先搜索地址
-    const loc = await Location.search(keyword.trim());
+    const loc = await Locator.search(keyword.trim());
     State.location = loc;
     const data = await AMap.searchNearby(loc.lat, loc.lng);
     if (!data || data.length === 0) {
