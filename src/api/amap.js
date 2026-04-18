@@ -1,136 +1,122 @@
 /**
- * 高德地图 JS API 封装
+ * 高德地图 API 封装
  * 
- * 使用高德 JS API (v2.0) 替代 REST API，解决浏览器跨域问题
- * 需要先加载插件：AMap.PlaceSearch, AMap.Geocoder
+ * 使用 CORS 代理解决浏览器跨域问题
+ * 代理服务：corsproxy.io
  */
 const AMapWrapper = (() => {
-  // 🔑 高德 JS API Key
-  const JS_API_KEY = '19dab2fef285a816ec8779e835984820';
+  // 🔑 高德 REST API Key
+  const API_KEY = '19dab2fef285a816ec8779e835984820';
   const RADIUS = 5000; // 5公里
+  
+  // CORS 代理（使用公共代理服务）
+  const CORS_PROXY = 'https://corsproxy.io/?';
 
-  // 缓存加载完成的 AMap 对象和插件
-  let amapReady = null;
-
-  // 等待 AMap 和插件加载完成
-  function waitForAMap() {
-    if (amapReady) return amapReady;
-    
-    amapReady = new Promise((resolve, reject) => {
-      // 等待 AMap 加载
-      const checkAMap = () => {
-        if (!window.AMap) {
-          setTimeout(checkAMap, 100);
-          return;
-        }
-        
-        // 加载必要的插件
-        window.AMap.plugin(['AMap.PlaceSearch', 'AMap.Geocoder'], () => {
-          resolve(window.AMap);
-        });
-      };
-      
-      checkAMap();
-    });
-    
-    return amapReady;
+  /**
+   * 带 CORS 代理的 fetch
+   */
+  async function _fetchWithProxy(url) {
+    const proxyUrl = CORS_PROXY + encodeURIComponent(url);
+    const resp = await fetch(proxyUrl);
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+    return resp.json();
   }
 
   /**
    * 周边搜索 - 搜索附近餐厅
-   * 使用 AMap.PlaceSearch
    */
   async function searchNearby(lat, lng) {
-    const AMap = await waitForAMap();
+    const url = `https://restapi.amap.com/v3/place/around?key=${API_KEY}&location=${lng},${lat}&radius=${RADIUS}&types=050000&offset=20&page=1&extensions=all`;
+    const data = await _fetchWithProxy(url);
     
-    return new Promise((resolve, reject) => {
-      const placeSearch = new AMap.PlaceSearch({
-        city: '全国',
-        citylimit: false,
-        pageSize: 50,
-        pageIndex: 1,
-        extensions: 'all',
-        radius: RADIUS,
-        type: '餐饮服务'
-      });
+    if (data.status !== '1') {
+      throw new Error(data.info || '获取周边美食失败');
+    }
+    
+    const pois = data.pois || [];
+    if (pois.length === 0) {
+      return [];
+    }
+    
+    return pois.map(poi => {
+      // 提取距离
+      let distance = '';
+      if (poi.distance) {
+        const d = parseInt(poi.distance);
+        distance = d >= 1000 ? `${(d / 1000).toFixed(1)}km` : `${d}m`;
+      }
+      
+      // 提取评分
+      let rating = '';
+      
+      // 图片
+      let photo = '';
+      if (poi.photos && poi.photos.length > 0) {
+        photo = poi.photos[0].url || '';
+      }
 
-      // 搜索附近餐厅
-      placeSearch.searchNearBy('', [lng, lat], RADIUS, (status, result) => {
-        if (status === 'complete' && result.poiList) {
-          const pois = result.poiList.pois || [];
-          resolve(pois.map(_formatPOI));
-        } else if (status === 'no_data') {
-          resolve([]);
-        } else {
-          reject(new Error(result && result.info ? result.info : '获取周边美食失败'));
-        }
-      });
+      return {
+        id: poi.id,
+        name: poi.name,
+        address: poi.address || '',
+        type: poi.type || '',
+        tel: poi.tel || '',
+        rating: rating,
+        distance: distance,
+        photo: photo,
+        lat: poi.location ? poi.location.split(',')[1] : '',
+        lng: poi.location ? poi.location.split(',')[0] : ''
+      };
     });
   }
 
   /**
    * 逆地理编码 - 经纬度转地址
-   * 使用 AMap.Geocoder
    */
   async function reverseGeocode(lat, lng, signal) {
-    const AMap = await waitForAMap();
+    const url = `https://restapi.amap.com/v3/geocode/regeo?key=${API_KEY}&location=${lng},${lat}&extensions=base`;
     
-    return new Promise((resolve, reject) => {
-      const geocoder = new AMap.Geocoder({
-        extensions: 'base'
-      });
-
-      // 如果有 abort signal，需要处理
-      if (signal) {
-        signal.addEventListener('abort', () => {
-          reject(new Error('请求已取消'));
-        });
-      }
-
-      geocoder.getAddress([lng, lat], (status, result) => {
-        if (status === 'complete' && result.regeocode) {
-          const rc = result.regeocode;
-          resolve({
-            formattedAddress: rc.formattedAddress || '',
-            city: (rc.addressComponent && rc.addressComponent.city) || 
-                  (rc.addressComponent && rc.addressComponent.province) || ''
-          });
-        } else {
-          reject(new Error('地址解析失败'));
-        }
-      });
-    });
+    // 如果有 signal，处理 abort
+    if (signal) {
+      const controller = new AbortController();
+      signal.addEventListener('abort', () => controller.abort());
+    }
+    
+    const data = await _fetchWithProxy(url);
+    
+    if (data.status !== '1' || !data.regeocode) {
+      throw new Error('地址解析失败');
+    }
+    
+    const rc = data.regeocode;
+    return {
+      formattedAddress: rc.formattedAddress || '',
+      city: (rc.addressComponent && rc.addressComponent.city) || 
+            (rc.addressComponent && rc.addressComponent.province) || ''
+    };
   }
 
   /**
    * 地理编码 - 地址转经纬度
-   * 使用 AMap.Geocoder
    */
   async function geocode(address) {
-    const AMap = await waitForAMap();
+    const url = `https://restapi.amap.com/v3/geocode/geo?key=${API_KEY}&address=${encodeURIComponent(address)}&city=&extensions=base`;
+    const data = await _fetchWithProxy(url);
     
-    return new Promise((resolve, reject) => {
-      const geocoder = new AMap.Geocoder({
-        city: '', // 全国
-        extensions: 'base'
-      });
-
-      geocoder.getLocation(address, (status, result) => {
-        if (status === 'complete' && result.geocodes && result.geocodes.length > 0) {
-          const results = result.geocodes.map(g => {
-            const [lng, lat] = g.location.split(',').map(Number);
-            return {
-              lat,
-              lng,
-              formattedAddress: g.formattedAddress || g.address || address,
-              city: g.city || ''
-            };
-          });
-          resolve(results);
-        } else {
-          resolve([]);
-        }
-      });
+    if (data.status !== '1' || !data.geocodes || data.geocodes.length === 0) {
+      return [];
+    }
+    
+    return data.geocodes.map(g => {
+      const [lng, lat] = g.location.split(',').map(Number);
+      return {
+        lat,
+        lng,
+        formattedAddress: g.formattedAddress || g.address || address,
+        city: g.city || ''
+      };
     });
   }
 
@@ -138,114 +124,56 @@ const AMapWrapper = (() => {
    * 关键词搜索餐厅
    */
   async function searchByKeyword(lat, lng, keyword) {
-    const AMap = await waitForAMap();
+    const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=050000&city=${encodeURIComponent('')}&citylimit=false&offset=20&page=1&extensions=all`;
+    const data = await _fetchWithProxy(url);
     
-    return new Promise((resolve, reject) => {
-      const placeSearch = new AMap.PlaceSearch({
-        city: '全国',
-        citylimit: false,
-        pageSize: 50,
-        pageIndex: 1,
-        extensions: 'all',
-        radius: RADIUS,
-        type: '餐饮服务'
-      });
-
-      // 关键词搜索
-      placeSearch.search(keyword, (status, result) => {
-        if (status === 'complete' && result.poiList) {
-          const pois = result.poiList.pois || [];
-          resolve(pois.map(_formatPOI));
-        } else if (status === 'no_data') {
-          resolve([]);
-        } else {
-          reject(new Error(result && result.info ? result.info : '搜索失败'));
-        }
-      });
-    });
-  }
-
-  /**
-   * 关键词搜索地址（用于手动输入地址搜索）
-   */
-  async function searchAddress(keyword) {
-    const AMap = await waitForAMap();
+    if (data.status !== '1') {
+      throw new Error(data.info || '搜索失败');
+    }
     
-    return new Promise((resolve, reject) => {
-      const placeSearch = new AMap.PlaceSearch({
-        city: '', // 全国
-        citylimit: false,
-        pageSize: 20,
-        pageIndex: 1,
-        extensions: 'base'
-      });
-
-      placeSearch.search(keyword, (status, result) => {
-        if (status === 'complete' && result.poiList) {
-          const pois = result.poiList.pois || [];
-          resolve(pois.map(poi => ({
-            id: poi.id,
-            name: poi.name,
-            address: poi.address || '',
-            lat: poi.location.lat,
-            lng: poi.location.lng,
-            city: poi.city || ''
-          })));
-        } else if (status === 'no_data') {
-          resolve([]);
-        } else {
-          reject(new Error(result && result.info ? result.info : '地址搜索失败'));
-        }
-      });
-    });
-  }
-
-  // 格式化 POI 数据
-  function _formatPOI(poi) {
-    // 提取距离
-    let distance = '';
-    if (poi.distance) {
-      const d = parseInt(poi.distance);
-      distance = d >= 1000 ? `${(d / 1000).toFixed(1)}km` : `${d}m`;
-    }
-
-    // 提取评分
-    let rating = '';
-    if (poi.rating) {
-      rating = poi.rating;
-    }
-
-    // 图片
-    let photo = '';
-    if (poi.photos && poi.photos.length > 0) {
-      photo = poi.photos[0].url || '';
-    }
-
-    // 标签/品类
-    let type = poi.type || '';
-    const typeParts = type.split(';');
-    type = typeParts.map(t => t.replace(/^\d{6}\|?/, '')).filter(Boolean).join('、');
-
-    return {
+    const pois = data.pois || [];
+    return pois.map(poi => ({
       id: poi.id,
       name: poi.name,
       address: poi.address || '',
-      type: type,
+      type: poi.type || '',
       tel: poi.tel || '',
-      rating: rating,
-      distance: distance,
-      photo: photo,
-      lat: poi.location ? poi.location.lat : '',
-      lng: poi.location ? poi.location.lng : ''
-    };
+      rating: '',
+      distance: '',
+      photo: '',
+      lat: poi.location ? poi.location.split(',')[1] : '',
+      lng: poi.location ? poi.location.split(',')[0] : ''
+    }));
+  }
+
+  /**
+   * 关键词搜索地址
+   */
+  async function searchAddress(keyword) {
+    const url = `https://restapi.amap.com/v3/place/text?key=${API_KEY}&keywords=${encodeURIComponent(keyword)}&types=&city=&citylimit=false&offset=20&page=1&extensions=base`;
+    const data = await _fetchWithProxy(url);
+    
+    if (data.status !== '1') {
+      throw new Error(data.info || '地址搜索失败');
+    }
+    
+    const pois = data.pois || [];
+    return pois.map(poi => ({
+      id: poi.id,
+      name: poi.name,
+      address: poi.address || '',
+      lat: poi.location ? poi.location.split(',')[1] : '',
+      lng: poi.location ? poi.location.split(',')[0] : '',
+      city: poi.city || ''
+    }));
   }
 
   function getApiKey() {
-    return JS_API_KEY;
+    return API_KEY;
   }
 
   function isKeyConfigured() {
-    return JS_API_KEY !== '';
+    return API_KEY !== '';
   }
 
   return { 
@@ -259,5 +187,5 @@ const AMapWrapper = (() => {
   };
 })();
 
-// 暴露全局变量（注意：不能用 AMap，会覆盖高德原生 API）
+// 暴露全局变量
 window.AMapAPI = AMapWrapper;
