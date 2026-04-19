@@ -892,7 +892,7 @@
       State.location = loc;
       const data = await Promise.race([
         AMapAPI.searchNearby(loc.lat, loc.lng, loc.city),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("搜索餐厅超时")), 5e3))
+        new Promise((_, reject) => setTimeout(() => reject(new Error("搜索餐厅超时")), 2e4))
       ]);
       console.log("餐厅搜索成功", data.length, "条");
       if (!data || data.length === 0) {
