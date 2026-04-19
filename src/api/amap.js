@@ -49,6 +49,17 @@ const AMapWrapper = (() => {
     '东莞': { lat: 23.05, lng: 113.75, name: '东莞市', dist: '南城区' },
     '珠海': { lat: 22.27, lng: 113.58, name: '珠海市', dist: '香洲区' },
     '温州': { lat: 28.00, lng: 120.67, name: '温州市', dist: '鹿城区' },
+    '正定': { lat: 38.14, lng: 114.57, name: '石家庄市', dist: '正定县' },
+    '雄安': { lat: 38.97, lng: 115.93, name: '保定市', dist: '雄安新区' },
+    '廊坊': { lat: 39.52, lng: 116.68, name: '廊坊市', dist: '广阳区' },
+    '保定': { lat: 38.87, lng: 115.48, name: '保定市', dist: '竞秀区' },
+    '唐山': { lat: 39.63, lng: 118.18, name: '唐山市', dist: '路北区' },
+    '沧州': { lat: 38.30, lng: 116.83, name: '沧州市', dist: '运河区' },
+    '邯郸': { lat: 36.61, lng: 114.54, name: '邯郸市', dist: '丛台区' },
+    '邢台': { lat: 37.07, lng: 114.50, name: '邢台市', dist: '襄都区' },
+    '张家口': { lat: 40.77, lng: 114.88, name: '张家口市', dist: '桥西区' },
+    '承德': { lat: 40.97, lng: 117.94, name: '承德市', dist: '双桥区' },
+    '衡水': { lat: 37.74, lng: 115.67, name: '衡水市', dist: '桃城区' },
   };
 
   // 餐厅类型池（多种类）
@@ -156,8 +167,10 @@ const AMapWrapper = (() => {
       ? `${Math.round(distKm * 1000)}m` 
       : `${distKm.toFixed(1)}km`;
     
-    // 地址：城市+区+街道+门牌
-    const address = (cityName || '') + (distName || '') + street + num + '号';
+    // 地址：城市+区+街道+门牌（无城市时只用街道门牌）
+    const address = cityName
+      ? (cityName + (distName || '') + street + num + '号')
+      : (street + num + '号');
     
     return {
       id: `r${seed}_${index}`,
