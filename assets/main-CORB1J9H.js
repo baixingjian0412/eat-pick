@@ -484,7 +484,29 @@
       }
       return Math.abs(hash);
     }
-    function generateRestaurant(lat, lng, seed, index, cityName, distName) {
+    function extractAreaName(address, cityData) {
+      const addr = address.trim();
+      const cityDistMatch = addr.match(/^(.*?市)?(.*?(?:区|县|镇|乡|新区|开发区))$/);
+      if (cityDistMatch && cityDistMatch[2]) {
+        return (cityDistMatch[1] || "") + cityDistMatch[2];
+      }
+      if (addr === cityData.city || addr === cityData.name) {
+        if (cityData.name.includes(cityData.city)) {
+          return cityData.name;
+        } else {
+          return cityData.dist;
+        }
+      }
+      if (addr.includes(cityData.city)) {
+        if (cityData.name.includes(cityData.city)) {
+          return cityData.name;
+        } else {
+          return cityData.dist;
+        }
+      }
+      return cityData.name;
+    }
+    function generateRestaurant(lat, lng, seed, index, areaName) {
       const r = seededRandom(seed, index);
       const offsetLat = (r - 0.5) * 0.06;
       const offsetLng = (seededRandom(seed, index + 1e3) - 0.5) * 0.08;
@@ -503,7 +525,7 @@
       const rating = (3.5 + seededRandom(seed, index + 6) * 1.4).toFixed(1);
       const price = Math.floor(15 + seededRandom(seed, index + 7) * 150);
       const distance = distKm < 0.5 ? `${Math.round(distKm * 1e3)}m` : `${distKm.toFixed(1)}km`;
-      const address = cityName ? cityName + (distName || "") + street + num + "号" : street + num + "号";
+      const address = areaName ? areaName + street + num + "号" : street + num + "号";
       return {
         id: `r${seed}_${index}`,
         name,
@@ -566,26 +588,12 @@
     async function searchNearby(lat, lng, cityHint) {
       console.log("searchNearby called", lat, lng, cityHint);
       try {
-        let cityData = null;
-        if (cityHint) {
-          cityData = matchCity(cityHint);
-        }
-        if (!cityData) {
-          for (const [name, data] of Object.entries(CITIES)) {
-            if (Math.abs(data.lat - lat) < 0.5 && Math.abs(data.lng - lng) < 0.5) {
-              cityData = { city: name, ...data };
-              break;
-            }
-          }
-        }
-        if (!cityData) {
-          cityData = { city: "全国", ...CITIES["北京"] };
-        }
+        const areaName = cityHint || "";
         const count = 20;
-        const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${cityData.city}_${cityData.dist}`);
+        const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${areaName}`);
         const restaurants = [];
         for (let i = 0; i < count; i++) {
-          restaurants.push(generateRestaurant(lat, lng, seed, i, cityData.name, cityData.dist));
+          restaurants.push(generateRestaurant(lat, lng, seed, i, areaName));
         }
         restaurants.sort((a, b) => {
           const aDist = parseFloat(a.distance);
@@ -626,15 +634,14 @@
         const cityData = matchCity(address);
         if (cityData) {
           const seed2 = hashCode(address);
-          const lat2 = cityData.lat + (seededRandom(seed2, 0) - 0.5) * 0.5;
-          const lng2 = cityData.lng + (seededRandom(seed2, 1) - 0.5) * 0.7;
-          const districtMatch = address.match(/([^市]+区|[^市]+县|[^市]+镇)/);
-          const district = districtMatch ? districtMatch[1] : cityData.dist;
+          const lat2 = cityData.lat + (seededRandom(seed2, 0) - 0.5) * 0.1;
+          const lng2 = cityData.lng + (seededRandom(seed2, 1) - 0.5) * 0.12;
+          const areaName = extractAreaName(address, cityData);
           const result2 = [{
             lat: lat2,
             lng: lng2,
             formattedAddress: address,
-            city: cityData.name
+            city: areaName
           }];
           console.log("geocode result (city matched)", result2);
           return result2;
@@ -657,12 +664,11 @@
     }
     async function searchByKeyword(lat, lng, keyword) {
       const cityData = matchCity(keyword);
-      const cn = cityData ? cityData.name : "";
-      const dn = cityData ? cityData.dist : "";
+      const areaName = cityData ? cityData.name.includes(cityData.city) ? cityData.name : cityData.dist : "";
       const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_kw_${keyword}`);
       const results = [];
       for (let i = 0; i < 6; i++) {
-        results.push(generateRestaurant(lat, lng, seed, i, cn, dn));
+        results.push(generateRestaurant(lat, lng, seed, i, areaName));
       }
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -676,15 +682,16 @@
         setTimeout(() => {
           if (cityData) {
             const seed = hashCode(keyword);
-            const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.3;
-            const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.4;
+            const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.1;
+            const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.12;
+            const areaName = extractAreaName(keyword, cityData);
             resolve([{
               id: "addr1",
-              name: cityData.name,
-              address: cityData.name + cityData.dist,
+              name: areaName,
+              address: areaName,
               lat,
               lng,
-              city: cityData.name
+              city: areaName
             }]);
           } else {
             const seed = hashCode(keyword);
