@@ -517,7 +517,7 @@ const AMapWrapper = (() => {
   }
 
   function getApiKey() {
-    return 'f2a33cba4d112b52173ba1d207707ae4';
+    return '583bb695a349f120ce38464e5fea8142';
   }
 
   function isKeyConfigured() {
