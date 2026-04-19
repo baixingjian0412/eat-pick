@@ -586,26 +586,105 @@
       return null;
     }
     async function searchNearby(lat, lng, cityHint) {
-      console.log("searchNearby called", lat, lng, cityHint);
-      try {
-        const areaName = cityHint || "";
-        const count = 20;
-        const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${areaName}`);
-        const restaurants = [];
-        for (let i = 0; i < count; i++) {
-          restaurants.push(generateRestaurant(lat, lng, seed, i, areaName));
+      console.log("searchNearby called (real API)", lat, lng, cityHint);
+      return new Promise((resolve, reject) => {
+        if (typeof AMap === "undefined") {
+          console.error("AMap not loaded, using mock");
+          resolve(mockSearchNearby(lat, lng, cityHint));
+          return;
         }
-        restaurants.sort((a, b) => {
-          const aDist = parseFloat(a.distance);
-          const bDist = parseFloat(b.distance);
-          return aDist - bDist;
+        AMap.plugin(["AMap.PlaceSearch"], function() {
+          let city = cityHint || "全国";
+          const cityMatch = city.match(/^(.+?(?:市|省|自治区))/);
+          if (cityMatch) {
+            city = cityMatch[1];
+          }
+          console.log("PlaceSearch city:", city);
+          const placeSearch = new AMap.PlaceSearch({
+            city,
+            citylimit: false,
+            pageSize: 20,
+            pageIndex: 1,
+            type: "餐饮服务",
+            extensions: "all"
+          });
+          placeSearch.searchNearBy("", lat, lng, 5e3, function(status, result) {
+            if (status === "complete" && result.poiList && result.poiList.pois) {
+              const pois = result.poiList.pois;
+              const restaurants = pois.map((poi, index) => {
+                const poiLocation = poi.location;
+                const distKm = getDistance(lat, lng, poiLocation.getLat(), poiLocation.getLng());
+                return {
+                  id: poi.id || `r${index}`,
+                  name: poi.name,
+                  address: poi.address || poi.name,
+                  type: poi.type || "餐饮",
+                  rating: poi.rating ? parseFloat(poi.rating).toFixed(1) : (3.5 + Math.random() * 1).toFixed(1),
+                  price: poi.shopinfo && poi.shopinfo.price ? parseInt(poi.shopinfo.price) : Math.floor(15 + Math.random() * 80),
+                  distance: distKm < 1 ? `${Math.round(distKm * 1e3)}m` : `${distKm.toFixed(1)}km`,
+                  lat: poiLocation.getLat(),
+                  lng: poiLocation.getLng()
+                };
+              });
+              restaurants.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+              console.log("searchNearby result (real)", restaurants.length, "restaurants");
+              resolve(restaurants);
+            } else {
+              console.log("PlaceSearch failed, using mock:", status, result);
+              resolve(mockSearchNearby(lat, lng, cityHint));
+            }
+          });
         });
-        console.log("searchNearby result", restaurants.length, "restaurants");
-        return restaurants;
-      } catch (e) {
-        console.error("searchNearby error", e);
-        throw e;
+      });
+    }
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+    function mockSearchNearby(lat, lng, cityHint) {
+      console.log("mockSearchNearby called", lat, lng, cityHint);
+      const areaName = cityHint || "";
+      const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${areaName}`);
+      const restaurants = [];
+      for (let i = 0; i < 20; i++) {
+        const r = seededRandom(seed, i);
+        const offsetLat = (r - 0.5) * 0.06;
+        const offsetLng = (seededRandom(seed, i + 1e3) - 0.5) * 0.08;
+        const rLat = lat + offsetLat;
+        const rLng = lng + offsetLng;
+        const distKm = Math.sqrt(offsetLat * offsetLat + offsetLng * offsetLng) * 111;
+        const streetIdx = Math.floor(seededRandom(seed, i + 1) * STREET_NAMES.length);
+        const num = Math.floor(seededRandom(seed, i + 2) * 200 + 1);
+        const street = STREET_NAMES[streetIdx];
+        const typeIdx = Math.floor(seededRandom(seed, i + 3) * FOOD_TYPES.length);
+        const type = FOOD_TYPES[typeIdx];
+        const preIdx = Math.floor(seededRandom(seed, i + 4) * NAME_PREFIX.length);
+        const surIdx = Math.floor(seededRandom(seed, i + 5) * NAME_SUFFIX.length);
+        const surNameIdx = Math.floor(seededRandom(seed, i + 8) * NAME_SUFFIX.length);
+        const name = NAME_PREFIX[preIdx] + NAME_SUFFIX[surIdx] + type + NAME_SUFFIX[surNameIdx];
+        const rating = (3.5 + seededRandom(seed, i + 6) * 1.4).toFixed(1);
+        const price = Math.floor(15 + seededRandom(seed, i + 7) * 150);
+        const distance = distKm < 0.5 ? `${Math.round(distKm * 1e3)}m` : `${distKm.toFixed(1)}km`;
+        const address = areaName ? areaName + street + num + "号" : street + num + "号";
+        restaurants.push({
+          id: `r${seed}_${i}`,
+          name,
+          address,
+          type,
+          rating,
+          price,
+          distance,
+          lat: rLat,
+          lng: rLng
+        });
       }
+      restaurants.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+      console.log("mockSearchNearby result", restaurants.length, "restaurants");
+      return restaurants;
     }
     async function reverseGeocode(lat, lng, signal) {
       return new Promise((resolve) => {
@@ -637,11 +716,14 @@
           const lat2 = cityData.lat + (seededRandom(seed2, 0) - 0.5) * 0.1;
           const lng2 = cityData.lng + (seededRandom(seed2, 1) - 0.5) * 0.12;
           const areaName = extractAreaName(address, cityData);
+          const cityName = cityData.name || "";
           const result2 = [{
             lat: lat2,
             lng: lng2,
             formattedAddress: address,
-            city: areaName
+            city: areaName,
+            cityCode: cityName
+            // 添加城市代码供 PlaceSearch 使用
           }];
           console.log("geocode result (city matched)", result2);
           return result2;
