@@ -109,9 +109,9 @@ async function onSearchSubmit(keyword) {
     console.log('地址定位成功', loc);
     State.location = loc;
     
-    // 再次使用 Promise.race 添加超时
+    // 再次使用 Promise.race 添加超时，传入城市提示
     const data = await Promise.race([
-      AMapAPI.searchNearby(loc.lat, loc.lng),
+      AMapAPI.searchNearby(loc.lat, loc.lng, loc.city),
       new Promise((_, reject) => setTimeout(() => reject(new Error('搜索餐厅超时')), 5000))
     ]);
     console.log('餐厅搜索成功', data.length, '条');
