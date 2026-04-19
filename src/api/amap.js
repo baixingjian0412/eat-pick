@@ -259,8 +259,15 @@ const AMapWrapper = (() => {
     console.log('searchNearby called (real API)', lat, lng, cityHint);
     
     return new Promise((resolve, reject) => {
+      // 设置超时
+      const timeoutId = setTimeout(() => {
+        console.log('PlaceSearch timeout, using mock');
+        resolve(mockSearchNearby(lat, lng, cityHint));
+      }, 15000);  // 15秒超时
+      
       if (typeof AMap === 'undefined') {
         console.error('AMap not loaded, using mock');
+        clearTimeout(timeoutId);
         resolve(mockSearchNearby(lat, lng, cityHint));
         return;
       }
@@ -287,6 +294,10 @@ const AMapWrapper = (() => {
         
         // 搜索周边餐饮
         placeSearch.searchNearBy('', lat, lng, 5000, function(status, result) {
+          clearTimeout(timeoutId);
+          
+          console.log('PlaceSearch status:', status, result);
+          
           if (status === 'complete' && result.poiList && result.poiList.pois) {
             const pois = result.poiList.pois;
             const restaurants = pois.map((poi, index) => {
