@@ -187,7 +187,7 @@ const AMapWrapper = (() => {
       '海南省': CITIES['海口'], '四川省': CITIES['成都'], '贵州省': CITIES['贵阳'],
       '云南省': CITIES['昆明'], '陕西省': CITIES['西安'], '甘肃省': CITIES['兰州'],
       '青海省': CITIES['兰州'], '内蒙古': CITIES['呼和浩特'], '广西': CITIES['南宁'],
-      '西藏': CILES['拉萨'], '宁夏': CITIES['兰州'], '新疆': CITIES['乌鲁木齐'],
+      '西藏': CITIES['拉萨'], '宁夏': CITIES['兰州'], '新疆': CITIES['乌鲁木齐'],
       '香港': CITIES['深圳'], '澳门': CITIES['珠海'], '台湾': null,
     };
     
