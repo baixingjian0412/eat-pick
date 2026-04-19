@@ -302,163 +302,215 @@
       "珠海": { lat: 22.27, lng: 113.58, name: "珠海市", dist: "香洲区" },
       "温州": { lat: 28, lng: 120.67, name: "温州市", dist: "鹿城区" }
     };
-    function getCityRestaurants(cityName, distName, baseLat, baseLng) {
-      const allRestaurants = {
-        "北京": [
-          { name: "全聚德烤鸭", address: distName + "建国路120号", type: "北京菜", rating: "4.6" },
-          { name: "海底捞火锅", address: distName + "建国路88号", type: "火锅", rating: "4.8" },
-          { name: "西贝莜面村", address: distName + "建国路92号", type: "西北菜", rating: "4.5" },
-          { name: "绿茶餐厅", address: distName + "建国路100号", type: "江浙菜", rating: "4.3" },
-          { name: "呷哺呷哺", address: distName + "建国路110号", type: "小火锅", rating: "4.2" },
-          { name: "吉野家", address: distName + "建国路130号", type: "日式快餐", rating: "4.0" },
-          { name: "眉州东坡", address: distName + "建国路95号", type: "川菜", rating: "4.4" },
-          { name: "兰州拉面", address: distName + "建国路150号", type: "拉面", rating: "4.1" }
-        ],
-        "上海": [
-          { name: "绿波廊", address: distName + "豫园路120号", type: "本帮菜", rating: "4.5" },
-          { name: "南翔小笼", address: distName + "豫园路88号", type: "小吃", rating: "4.6" },
-          { name: "小杨生煎", address: distName + "南京路步行街100号", type: "小吃", rating: "4.4" },
-          { name: "光明邨大酒家", address: distName + "淮海路92号", type: "本帮菜", rating: "4.3" },
-          { name: "红房子西菜馆", address: distName + "淮海路120号", type: "西餐", rating: "4.2" },
-          { name: "上海老饭店", address: distName + "福佑路88号", type: "本帮菜", rating: "4.5" },
-          { name: "杏花楼", address: distName + "福州路130号", type: "粤菜", rating: "4.3" },
-          { name: "沈大成", address: distName + "南京路步行街150号", type: "小吃", rating: "4.1" }
-        ],
-        "广州": [
-          { name: "陶陶居", address: distName + "第十甫路20号", type: "粤菜", rating: "4.5" },
-          { name: "莲香楼", address: distName + "第十甫路48号", type: "粤菜", rating: "4.4" },
-          { name: "点都德", address: distName + "花城大道88号", type: "粤菜", rating: "4.6" },
-          { name: "广州酒家", address: distName + "文昌路92号", type: "粤菜", rating: "4.5" },
-          { name: "炳胜品味", address: distName + "天河路120号", type: "粤菜", rating: "4.4" },
-          { name: "惠食佳", address: distName + "东风东路130号", type: "粤菜", rating: "4.5" },
-          { name: "银记肠粉", address: distName + "上九路88号", type: "小吃", rating: "4.3" },
-          { name: "陈添记鱼皮", address: distName + "宝华路100号", type: "小吃", rating: "4.2" }
-        ],
-        "深圳": [
-          { name: "润园四季椰子鸡", address: distName + "海岸城购物中心88号", type: "粤菜", rating: "4.5" },
-          { name: "蔡澜越南粉", address: distName + "万象城120号", type: "东南亚菜", rating: "4.4" },
-          { name: "日日香鹅肉饭店", address: distName + "皇庭广场92号", type: "潮汕菜", rating: "4.3" },
-          { name: "粤集", address: distName + "壹方城100号", type: "粤菜", rating: "4.5" },
-          { name: "鼎泰丰", address: distName + "华强北路130号", type: "江浙菜", rating: "4.4" },
-          { name: "绿茶餐厅", address: distName + "东门步行街150号", type: "江浙菜", rating: "4.2" },
-          { name: "八合里海记", address: distName + "华强南路88号", type: "火锅", rating: "4.6" },
-          { name: "探鱼", address: distName + "欢乐海岸120号", type: "川菜", rating: "4.3" }
-        ],
-        "杭州": [
-          { name: "外婆家", address: distName + "延安路200号", type: "杭帮菜", rating: "4.4" },
-          { name: "绿茶餐厅", address: distName + "龙翔桥100号", type: "杭帮菜", rating: "4.3" },
-          { name: "知味观", address: distName + "仁和路88号", type: "杭帮菜", rating: "4.5" },
-          { name: "楼外楼", address: distName + "孤山路30号", type: "杭帮菜", rating: "4.6" },
-          { name: "奎元馆", address: distName + "解放路120号", type: "面馆", rating: "4.4" },
-          { name: "弄堂里", address: distName + "河坊街92号", type: "杭帮菜", rating: "4.3" },
-          { name: "新白鹿", address: distName + "湖滨路130号", type: "杭帮菜", rating: "4.2" },
-          { name: "杭帮菜博物馆餐厅", address: distName + "虎跑路150号", type: "杭帮菜", rating: "4.4" }
-        ],
-        "成都": [
-          { name: "玉龙火锅", address: distName + "春熙路100号", type: "火锅", rating: "4.7" },
-          { name: "小龙坎", address: distName + "春熙路西段88号", type: "火锅", rating: "4.5" },
-          { name: "蜀大侠", address: distName + "建设路120号", type: "火锅", rating: "4.4" },
-          { name: "降龙爪爪", address: distName + "太古里92号", type: "小吃", rating: "4.3" },
-          { name: "钟水饺", address: distName + "总府路88号", type: "小吃", rating: "4.5" },
-          { name: "龙抄手", address: distName + "春熙路北段100号", type: "小吃", rating: "4.4" },
-          { name: "夫妻废片", address: distName + "宽窄巷子120号", type: "川菜", rating: "4.3" },
-          { name: "陈麻婆豆腐", address: distName + "青羊宫路92号", type: "川菜", rating: "4.6" }
-        ],
-        "重庆": [
-          { name: "珮姐老火锅", address: distName + "解放碑民权路28号", type: "火锅", rating: "4.8" },
-          { name: "周师兄大刀腰片", address: distName + "解放碑邹容路88号", type: "火锅", rating: "4.5" },
-          { name: "刘一手火锅", address: distName + "观音桥步行街100号", type: "火锅", rating: "4.4" },
-          { name: "小面50强", address: distName + "解放碑好吃街120号", type: "小吃", rating: "4.3" },
-          { name: "花市豌杂面", address: distName + "解放碑较场口88号", type: "小吃", rating: "4.5" },
-          { name: "阿婆春卷", address: distName + "磁器口古镇92号", type: "小吃", rating: "4.2" },
-          { name: "李子坝梁山鸡", address: distName + "李子坝正街100号", type: "川菜", rating: "4.4" },
-          { name: "九九牛肉馆", address: distName + "南坪万达广场120号", type: "川菜", rating: "4.3" }
-        ],
-        "武汉": [
-          { name: "户部巷蔡林记", address: distName + "户部巷88号", type: "小吃", rating: "4.4" },
-          { name: "热干面大王", address: distName + "吉庆街100号", type: "小吃", rating: "4.3" },
-          { name: "靓靓蒸虾", address: distName + "雪松路120号", type: "小龙虾", rating: "4.7" },
-          { name: "巴厘龙虾", address: distName + "雪松路92号", type: "小龙虾", rating: "4.5" },
-          { name: "老通城豆皮", address: distName + "大智路88号", type: "小吃", rating: "4.4" },
-          { name: "四季美汤包", address: distName + "江汉路100号", type: "小吃", rating: "4.5" },
-          { name: "武大食堂", address: distName + "武汉大学内", type: "食堂", rating: "4.1" },
-          { name: "湖锦酒楼", address: distName + "八一路120号", type: "鄂菜", rating: "4.3" }
-        ],
-        "西安": [
-          { name: "老孙家泡馍", address: distName + "东大街298号", type: "小吃", rating: "4.5" },
-          { name: "同盛祥泡馍", address: distName + "东大街368号", type: "小吃", rating: "4.4" },
-          { name: "回坊马二分店", address: distName + "回民街88号", type: "清真菜", rating: "4.3" },
-          { name: "贾三灌汤包", address: distName + "回民街北段100号", type: "小吃", rating: "4.5" },
-          { name: "biangbiang面", address: distName + "永兴坊120号", type: "小吃", rating: "4.4" },
-          { name: "春发生葫芦头", address: distName + "南院门街88号", type: "小吃", rating: "4.3" },
-          { name: "长安大牌档", address: distName + "长安路100号", type: "陕菜", rating: "4.4" },
-          { name: "大厨小馆", address: distName + "翠华路92号", type: "陕菜", rating: "4.2" }
-        ],
-        "济南": [
-          { name: "聚丰德", address: distName + "经二路118号", type: "鲁菜", rating: "4.4" },
-          { name: "便宜坊", address: distName + "芙蓉街88号", type: "鲁菜", rating: "4.3" },
-          { name: "草包包子", address: distName + "普利街100号", type: "小吃", rating: "4.5" },
-          { name: "孟家扒鸡", address: distName + "共青团路88号", type: "鲁菜", rating: "4.3" },
-          { name: "油旋张", address: distName + "芙蓉街92号", type: "小吃", rating: "4.2" },
-          { name: "崔家烧饼", address: distName + "经四路120号", type: "小吃", rating: "4.1" },
-          { name: "会仙楼", address: distName + "泉城路100号", type: "鲁菜", rating: "4.4" },
-          { name: "卫巷菜馆", address: distName + "泉城路88号", type: "鲁菜", rating: "4.3" }
-        ],
-        "南京": [
-          { name: "盐水鸭", address: distName + "夫子庙贡院街88号", type: "小吃", rating: "4.5" },
-          { name: "奇芳阁", address: distName + "夫子庙贡院街100号", type: "小吃", rating: "4.4" },
-          { name: "永和园", address: distName + "夫子庙瞻园路88号", type: "小吃", rating: "4.3" },
-          { name: "狮王府", address: distName + "中山北路88号", type: "淮扬菜", rating: "4.4" },
-          { name: "金陵饭店梅苑", address: distName + "汉中路88号", type: "淮扬菜", rating: "4.6" },
-          { name: "小笼汤包", address: distName + "新街口100号", type: "小吃", rating: "4.4" },
-          { name: "赤豆元宵", address: distName + "湖南路120号", type: "小吃", rating: "4.2" },
-          { name: "鸭血粉丝汤", address: distName + "中央北路88号", type: "小吃", rating: "4.3" }
-        ],
-        "长沙": [
-          { name: "文和友", address: distName + "杜甫江阁对面", type: "湘菜", rating: "4.6" },
-          { name: "茶颜悦色", address: distName + "黄兴路步行街88号", type: "茶饮", rating: "4.5" },
-          { name: "黑色经典臭豆腐", address: distName + "黄兴路100号", type: "小吃", rating: "4.4" },
-          { name: "火宫殿", address: distName + "坡子街120号", type: "湘菜", rating: "4.3" },
-          { name: "壹盏灯", address: distName + "人民西路88号", type: "湘菜", rating: "4.5" },
-          { name: "辣椒炒肉", address: distName + "都正街100号", type: "湘菜", rating: "4.4" },
-          { name: "盟重烧烤", address: distName + "冬瓜山92号", type: "烧烤", rating: "4.3" },
-          { name: "老梅园大虾城", address: distName + "南门口120号", type: "湘菜", rating: "4.2" }
-        ],
-        "天津": [
-          { name: "狗不理包子", address: distName + "和平路88号", type: "小吃", rating: "4.2" },
-          { name: "耳朵眼炸糕", address: distName + "古文化街100号", type: "小吃", rating: "4.3" },
-          { name: "十八街麻花", address: distName + "桂发祥大楼120号", type: "小吃", rating: "4.3" },
-          { name: "津菜典藏", address: distName + "成都道88号", type: "津菜", rating: "4.4" },
-          { name: "起士林", address: distName + "浙江路92号", type: "西餐", rating: "4.3" },
-          { name: "石头门坎素包", address: distName + "南市食品街100号", type: "小吃", rating: "4.4" },
-          { name: "上岗面馆", address: distName + "滨江道88号", type: "面馆", rating: "4.2" },
-          { name: "老爆三", address: distName + "五大道120号", type: "津菜", rating: "4.3" }
-        ],
-        "青岛": [
-          { name: "船歌鱼水饺", address: distName + "中山路88号", type: "海鲜", rating: "4.5" },
-          { name: "劈柴院锅贴", address: distName + "江宁路100号", type: "小吃", rating: "4.3" },
-          { name: "春和楼", address: distName + "中山路120号", type: "鲁菜", rating: "4.4" },
-          { name: "排骨米饭", address: distName + "台东八路88号", type: "小吃", rating: "4.2" },
-          { name: "王姐烧烤", address: distName + "中山路92号", type: "烧烤", rating: "4.4" },
-          { name: "海肠捞饭", address: distName + "闽江路100号", type: "海鲜", rating: "4.5" },
-          { name: "辣炒蛤蜊", address: distName + "营口路120号", type: "海鲜", rating: "4.3" },
-          { name: "鲅鱼饺子", address: distName + "香港中路88号", type: "海鲜", rating: "4.4" }
-        ]
-      };
-      if (!allRestaurants[cityName]) {
-        const defaultRestaurants = [
-          { name: "本地特色餐厅", address: distName + "中心路88号", type: "本帮菜", rating: "4.3" },
-          { name: "家常菜馆", address: distName + "建设路100号", type: "家常菜", rating: "4.2" },
-          { name: "火锅店", address: distName + "解放路120号", type: "火锅", rating: "4.4" },
-          { name: "川菜馆", address: distName + "人民路88号", type: "川菜", rating: "4.3" },
-          { name: "湘菜馆", address: distName + "和平路92号", type: "湘菜", rating: "4.2" },
-          { name: "东北菜馆", address: distName + "胜利路100号", type: "东北菜", rating: "4.1" },
-          { name: "烧烤店", address: distName + "文化路88号", type: "烧烤", rating: "4.3" },
-          { name: "面馆", address: distName + "健康路100号", type: "面馆", rating: "4.2" }
-        ];
-        return defaultRestaurants;
+    const FOOD_TYPES = [
+      "川菜",
+      "湘菜",
+      "粤菜",
+      "鲁菜",
+      "苏菜",
+      "浙菜",
+      "闽菜",
+      "徽菜",
+      "东北菜",
+      "西北菜",
+      "云南菜",
+      "贵州菜",
+      "清真菜",
+      "家常菜",
+      "火锅",
+      "串串",
+      "麻辣烫",
+      "冒菜",
+      "烧烤",
+      "烤鱼",
+      "烤肉",
+      "日料",
+      "韩料",
+      "东南亚菜",
+      "西餐",
+      "意餐",
+      "法餐",
+      "美式",
+      "快餐",
+      "汉堡",
+      "披萨",
+      "炸鸡",
+      "三明治",
+      "面馆",
+      "饺子",
+      "包子",
+      "馒头",
+      "粥店",
+      "粉面",
+      "小吃",
+      "卤味",
+      "凉皮",
+      "凉面",
+      "煎饼",
+      "手抓饼",
+      "鸡蛋灌饼",
+      "甜品",
+      "奶茶",
+      "咖啡",
+      "蛋糕",
+      "烘焙",
+      "海鲜",
+      "自助餐",
+      "私房菜",
+      "农家菜",
+      "食堂"
+    ];
+    const FOOD_NAMES = [
+      "老地方",
+      "小厨娘",
+      "老地方",
+      "味美轩",
+      "食全食美",
+      "家常小炒",
+      "好味居",
+      "香满楼",
+      "福满楼",
+      "醉香阁",
+      "福客来",
+      "口水坊",
+      "味道工厂",
+      "舌尖中国",
+      "百味居",
+      "千色坊",
+      "食为天",
+      "味道江湖",
+      "老街坊",
+      "老城厢",
+      "新发现",
+      "小酌轩",
+      "秘制坊",
+      "风味居",
+      "知味斋",
+      "大食堂",
+      "社区食堂",
+      "邻里餐厅",
+      "街角小馆",
+      "口口香",
+      "回味斋",
+      "香满园",
+      "聚贤庄",
+      "御膳房",
+      "香格里",
+      "楼外楼",
+      "外婆家",
+      "弄堂里",
+      "沈大成",
+      "西贝",
+      "绿茶",
+      "麦当劳",
+      "肯德基",
+      "汉堡王",
+      "必胜客",
+      "德克士",
+      "华莱士",
+      "沙县小吃",
+      "兰州拉面",
+      "黄焖鸡米饭",
+      "隆江猪脚饭",
+      "桂林米粉"
+    ];
+    const STREET_NAMES = [
+      "建设路",
+      "人民路",
+      "解放路",
+      "文化路",
+      "和平路",
+      "胜利路",
+      "中山路",
+      "长江路",
+      "黄河路",
+      "北京路",
+      "上海路",
+      "南京路",
+      "五四路",
+      "六安路",
+      "七里路",
+      "八一路",
+      "九华路",
+      "十全路",
+      "经一路",
+      "纬一路",
+      "纬二路",
+      "纬三路",
+      "经二路",
+      "经三路",
+      "工业路",
+      "商业街",
+      "美食街",
+      "步行街",
+      "商业街",
+      "学府路",
+      "科技路",
+      "创新路",
+      "光明路",
+      "振兴路",
+      "友谊路",
+      "团结路",
+      "幸福路",
+      "健康路",
+      "平安路",
+      "新华路",
+      "新兴路",
+      "朝阳路",
+      "东风路",
+      "西宁路",
+      "南门路",
+      "北门路",
+      "中心路",
+      "广场路",
+      "公园路",
+      "园林路",
+      "翠微路",
+      "玉泉路",
+      "金水路",
+      "银山路"
+    ];
+    function seededRandom(seed, index = 0) {
+      const x = Math.sin(seed * 9301 + index * 49297 + 233720) * 9301;
+      return x - Math.floor(x);
+    }
+    function hashCode(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash = hash & hash;
       }
-      return allRestaurants[cityName];
+      return Math.abs(hash);
+    }
+    function generateRestaurant(lat, lng, seed, index) {
+      const r = seededRandom(seed, index);
+      const offsetLat = (r - 0.5) * 0.06;
+      const offsetLng = (seededRandom(seed, index + 1e3) - 0.5) * 0.08;
+      const rLat = lat + offsetLat;
+      const rLng = lng + offsetLng;
+      const distKm = Math.sqrt(offsetLat * offsetLat + offsetLng * offsetLng) * 111;
+      const streetIdx = Math.floor(seededRandom(seed, index + 1) * STREET_NAMES.length);
+      const num = Math.floor(seededRandom(seed, index + 2) * 200 + 1);
+      const street = STREET_NAMES[streetIdx];
+      const typeIdx = Math.floor(seededRandom(seed, index + 3) * FOOD_TYPES.length);
+      const type = FOOD_TYPES[typeIdx];
+      const nameIdx = Math.floor(seededRandom(seed, index + 4) * FOOD_NAMES.length);
+      const name = FOOD_NAMES[nameIdx] + (seededRandom(seed, index + 5) > 0.7 ? type.slice(-2) : "");
+      const rating = (3.5 + seededRandom(seed, index + 6) * 1.4).toFixed(1);
+      const price = Math.floor(15 + seededRandom(seed, index + 7) * 150);
+      const distance = distKm < 0.5 ? `${Math.round(distKm * 1e3)}m` : `${distKm.toFixed(1)}km`;
+      return {
+        id: `r${seed}_${index}`,
+        name,
+        address: street + num + "号",
+        type,
+        rating,
+        price,
+        distance,
+        lat: rLat,
+        lng: rLng
+      };
     }
     function matchCity(keyword) {
       if (!keyword) return null;
@@ -495,7 +547,7 @@
         "青海省": CITIES["兰州"],
         "内蒙古": CITIES["呼和浩特"],
         "广西": CITIES["南宁"],
-        "西藏": CITIES["拉萨"],
+        "西藏": CILES["拉萨"],
         "宁夏": CITIES["兰州"],
         "新疆": CITIES["乌鲁木齐"],
         "香港": CITIES["深圳"],
@@ -506,14 +558,6 @@
         if (kw.includes(province)) return data;
       }
       return null;
-    }
-    function shuffleArray(array) {
-      const shuffled = [...array];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
     }
     async function searchNearby(lat, lng, cityHint) {
       console.log("searchNearby called", lat, lng, cityHint);
@@ -531,19 +575,21 @@
           }
         }
         if (!cityData) {
-          cityData = { city: "北京", ...CITIES["北京"] };
+          cityData = { city: "全国", ...CITIES["北京"] };
         }
-        const restaurants = getCityRestaurants(cityData.city, cityData.dist, cityData.lat, cityData.lng);
-        const shuffled = shuffleArray(restaurants);
-        const result = shuffled.slice(0, 8).map((r, i) => ({
-          ...r,
-          id: `r${i}`,
-          distance: `${(Math.random() * 3 + 0.5).toFixed(1)}km`,
-          lat: cityData.lat + (Math.random() - 0.5) * 0.05,
-          lng: cityData.lng + (Math.random() - 0.5) * 0.05
-        }));
-        console.log("searchNearby result", result);
-        return result;
+        const count = 20;
+        const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${cityData.city}`);
+        const restaurants = [];
+        for (let i = 0; i < count; i++) {
+          restaurants.push(generateRestaurant(lat, lng, seed, i));
+        }
+        restaurants.sort((a, b) => {
+          const aDist = parseFloat(a.distance);
+          const bDist = parseFloat(b.distance);
+          return aDist - bDist;
+        });
+        console.log("searchNearby result", restaurants.length, "restaurants");
+        return restaurants;
       } catch (e) {
         console.error("searchNearby error", e);
         throw e;
@@ -561,8 +607,10 @@
               break;
             }
           }
+          const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}`);
+          const streetIdx = Math.floor(seededRandom(seed, 0) * STREET_NAMES.length);
           resolve({
-            formattedAddress: cityName + distName + "中心路",
+            formattedAddress: cityName + distName + STREET_NAMES[streetIdx],
             city: cityName
           });
         }, 200);
@@ -573,18 +621,23 @@
       try {
         const cityData = matchCity(address);
         if (cityData) {
+          const seed2 = hashCode(address);
+          const lat2 = cityData.lat + (seededRandom(seed2, 0) - 0.5) * 0.5;
+          const lng2 = cityData.lng + (seededRandom(seed2, 1) - 0.5) * 0.7;
+          const districtMatch = address.match(/([^市]+区|[^市]+县|[^市]+镇)/);
+          const district = districtMatch ? districtMatch[1] : cityData.dist;
           const result2 = [{
-            lat: cityData.lat + Math.random() * 0.02,
-            lng: cityData.lng + Math.random() * 0.02,
-            formattedAddress: cityData.name + cityData.dist,
+            lat: lat2,
+            lng: lng2,
+            formattedAddress: address,
             city: cityData.name
           }];
-          console.log("geocode result (matched city)", result2);
+          console.log("geocode result (city matched)", result2);
           return result2;
         }
-        const hash = address.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-        const lat = 30 + hash % 200 / 10;
-        const lng = 100 + hash % 300 / 10;
+        const seed = hashCode(address);
+        const lat = 20 + seed % 300 / 10;
+        const lng = 80 + seed * 7 % 400 / 10;
         const result = [{
           lat,
           lng,
@@ -599,12 +652,14 @@
       }
     }
     async function searchByKeyword(lat, lng, keyword) {
-      const filtered = getCityRestaurants("北京", "朝阳").filter(
-        (r) => r.name.includes(keyword) || r.type.includes(keyword)
-      );
+      const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_kw_${keyword}`);
+      const results = [];
+      for (let i = 0; i < 6; i++) {
+        results.push(generateRestaurant(lat, lng, seed, i));
+      }
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve(filtered);
+          resolve(results);
         }, 300);
       });
     }
@@ -613,21 +668,27 @@
       return new Promise((resolve) => {
         setTimeout(() => {
           if (cityData) {
+            const seed = hashCode(keyword);
+            const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.3;
+            const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.4;
             resolve([{
               id: "addr1",
               name: cityData.name,
               address: cityData.name + cityData.dist,
-              lat: cityData.lat,
-              lng: cityData.lng,
+              lat,
+              lng,
               city: cityData.name
             }]);
           } else {
+            const seed = hashCode(keyword);
+            const lat = 20 + seed % 300 / 10;
+            const lng = 80 + seed * 7 % 400 / 10;
             resolve([{
               id: "addr1",
               name: keyword,
               address: keyword,
-              lat: 31.23 + Math.random() * 10,
-              lng: 121.47 + Math.random() * 10,
+              lat,
+              lng,
               city: ""
             }]);
           }
