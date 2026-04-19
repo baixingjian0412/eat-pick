@@ -588,8 +588,13 @@
     async function searchNearby(lat, lng, cityHint) {
       console.log("searchNearby called (real API)", lat, lng, cityHint);
       return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          console.log("PlaceSearch timeout, using mock");
+          resolve(mockSearchNearby(lat, lng, cityHint));
+        }, 15e3);
         if (typeof AMap === "undefined") {
           console.error("AMap not loaded, using mock");
+          clearTimeout(timeoutId);
           resolve(mockSearchNearby(lat, lng, cityHint));
           return;
         }
@@ -609,6 +614,8 @@
             extensions: "all"
           });
           placeSearch.searchNearBy("", lat, lng, 5e3, function(status, result) {
+            clearTimeout(timeoutId);
+            console.log("PlaceSearch status:", status, result);
             if (status === "complete" && result.poiList && result.poiList.pois) {
               const pois = result.poiList.pois;
               const restaurants = pois.map((poi, index) => {
