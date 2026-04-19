@@ -360,59 +360,49 @@
       "农家菜",
       "食堂"
     ];
-    const FOOD_NAMES = [
-      "老地方",
-      "小厨娘",
-      "老地方",
-      "味美轩",
-      "食全食美",
-      "家常小炒",
-      "好味居",
-      "香满楼",
-      "福满楼",
-      "醉香阁",
-      "福客来",
-      "口水坊",
-      "味道工厂",
-      "舌尖中国",
-      "百味居",
-      "千色坊",
-      "食为天",
-      "味道江湖",
-      "老街坊",
-      "老城厢",
-      "新发现",
-      "小酌轩",
-      "秘制坊",
-      "风味居",
-      "知味斋",
-      "大食堂",
-      "社区食堂",
-      "邻里餐厅",
-      "街角小馆",
-      "口口香",
-      "回味斋",
-      "香满园",
-      "聚贤庄",
-      "御膳房",
-      "香格里",
-      "楼外楼",
-      "外婆家",
-      "弄堂里",
-      "沈大成",
-      "西贝",
-      "绿茶",
-      "麦当劳",
-      "肯德基",
-      "汉堡王",
-      "必胜客",
-      "德克士",
-      "华莱士",
-      "沙县小吃",
-      "兰州拉面",
-      "黄焖鸡米饭",
-      "隆江猪脚饭",
-      "桂林米粉"
+    const NAME_PREFIX = [
+      "老",
+      "小",
+      "大",
+      "新",
+      "真",
+      "金",
+      "好",
+      "正",
+      "古",
+      "胖",
+      "阿",
+      "张",
+      "王",
+      "李",
+      "刘",
+      "陈",
+      "杨",
+      "赵",
+      "周",
+      "吴"
+    ];
+    const NAME_SUFFIX = [
+      "记",
+      "家",
+      "嫂",
+      "哥",
+      "婆",
+      "爷",
+      "婶",
+      "叔",
+      "妹",
+      "仔",
+      "坊",
+      "斋",
+      "居",
+      "轩",
+      "阁",
+      "堂",
+      "馆",
+      "楼",
+      "院",
+      "庄"
     ];
     const STREET_NAMES = [
       "建设路",
@@ -483,7 +473,7 @@
       }
       return Math.abs(hash);
     }
-    function generateRestaurant(lat, lng, seed, index) {
+    function generateRestaurant(lat, lng, seed, index, cityName, distName) {
       const r = seededRandom(seed, index);
       const offsetLat = (r - 0.5) * 0.06;
       const offsetLng = (seededRandom(seed, index + 1e3) - 0.5) * 0.08;
@@ -495,15 +485,18 @@
       const street = STREET_NAMES[streetIdx];
       const typeIdx = Math.floor(seededRandom(seed, index + 3) * FOOD_TYPES.length);
       const type = FOOD_TYPES[typeIdx];
-      const nameIdx = Math.floor(seededRandom(seed, index + 4) * FOOD_NAMES.length);
-      const name = FOOD_NAMES[nameIdx] + (seededRandom(seed, index + 5) > 0.7 ? type.slice(-2) : "");
+      const preIdx = Math.floor(seededRandom(seed, index + 4) * NAME_PREFIX.length);
+      const surIdx = Math.floor(seededRandom(seed, index + 5) * NAME_SUFFIX.length);
+      const surNameIdx = Math.floor(seededRandom(seed, index + 8) * NAME_SUFFIX.length);
+      const name = NAME_PREFIX[preIdx] + NAME_SUFFIX[surIdx] + type + NAME_SUFFIX[surNameIdx];
       const rating = (3.5 + seededRandom(seed, index + 6) * 1.4).toFixed(1);
       const price = Math.floor(15 + seededRandom(seed, index + 7) * 150);
       const distance = distKm < 0.5 ? `${Math.round(distKm * 1e3)}m` : `${distKm.toFixed(1)}km`;
+      const address = (cityName || "") + (distName || "") + street + num + "号";
       return {
         id: `r${seed}_${index}`,
         name,
-        address: street + num + "号",
+        address,
         type,
         rating,
         price,
@@ -578,10 +571,10 @@
           cityData = { city: "全国", ...CITIES["北京"] };
         }
         const count = 20;
-        const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${cityData.city}`);
+        const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${cityData.city}_${cityData.dist}`);
         const restaurants = [];
         for (let i = 0; i < count; i++) {
-          restaurants.push(generateRestaurant(lat, lng, seed, i));
+          restaurants.push(generateRestaurant(lat, lng, seed, i, cityData.name, cityData.dist));
         }
         restaurants.sort((a, b) => {
           const aDist = parseFloat(a.distance);
@@ -652,10 +645,13 @@
       }
     }
     async function searchByKeyword(lat, lng, keyword) {
+      const cityData = matchCity(keyword);
+      const cn = cityData ? cityData.name : "";
+      const dn = cityData ? cityData.dist : "";
       const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_kw_${keyword}`);
       const results = [];
       for (let i = 0; i < 6; i++) {
-        results.push(generateRestaurant(lat, lng, seed, i));
+        results.push(generateRestaurant(lat, lng, seed, i, cn, dn));
       }
       return new Promise((resolve) => {
         setTimeout(() => {
