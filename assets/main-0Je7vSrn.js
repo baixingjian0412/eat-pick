@@ -653,16 +653,23 @@
           console.log("PlaceSearch city:", city);
           const placeSearch = new AMap.PlaceSearch({
             city,
-            citylimit: false,
+            citylimit: true,
+            // 限制在城市范围内，提高稳定性
             pageSize: 20,
             pageIndex: 1,
-            type: "餐饮服务",
+            type: "餐饮",
             extensions: "all"
           });
-          placeSearch.searchNearBy("", lat, lng, 5e3, function(status, result) {
+          placeSearch.on("error", function(err) {
+            console.log("PlaceSearch error:", err);
             clearTimeout(timeoutId);
-            console.log("PlaceSearch status:", status, result);
-            if (status === "complete" && result.poiList && result.poiList.pois) {
+            resolve(mockSearchNearby(lat, lng, cityHint));
+          });
+          const searchKeyword = "美食 餐厅";
+          placeSearch.searchNearBy(searchKeyword, lat, lng, 5e3, function(status, result) {
+            clearTimeout(timeoutId);
+            console.log("PlaceSearch status:", status, "city:", city, "keyword:", searchKeyword);
+            if (status === "complete" && result.poiList && result.poiList.pois && result.poiList.pois.length > 0) {
               const pois = result.poiList.pois;
               const restaurants = pois.map((poi, index) => {
                 const poiLocation = poi.location;
@@ -683,8 +690,34 @@
               console.log("searchNearby result (real)", restaurants.length, "restaurants");
               resolve(restaurants);
             } else {
-              console.log("PlaceSearch failed, using mock:", status, result);
-              resolve(mockSearchNearby(lat, lng, cityHint));
+              console.log("PlaceSearch with keyword failed, trying empty keyword...");
+              placeSearch.searchNearBy("", lat, lng, 5e3, function(status2, result2) {
+                console.log("PlaceSearch empty keyword status:", status2);
+                if (status2 === "complete" && result2.poiList && result2.poiList.pois && result2.poiList.pois.length > 0) {
+                  const pois = result2.poiList.pois;
+                  const restaurants = pois.map((poi, index) => {
+                    const poiLocation = poi.location;
+                    const distKm = getDistance(lat, lng, poiLocation.getLat(), poiLocation.getLng());
+                    return {
+                      id: poi.id || `r${index}`,
+                      name: poi.name,
+                      address: poi.address || poi.name,
+                      type: poi.type || "餐饮",
+                      rating: poi.rating ? parseFloat(poi.rating).toFixed(1) : (3.5 + Math.random() * 1).toFixed(1),
+                      price: poi.shopinfo && poi.shopinfo.price ? parseInt(poi.shopinfo.price) : Math.floor(15 + Math.random() * 80),
+                      distance: distKm < 1 ? `${Math.round(distKm * 1e3)}m` : `${distKm.toFixed(1)}km`,
+                      lat: poiLocation.getLat(),
+                      lng: poiLocation.getLng()
+                    };
+                  });
+                  restaurants.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+                  console.log("searchNearby result (fallback)", restaurants.length, "restaurants");
+                  resolve(restaurants);
+                } else {
+                  console.log("PlaceSearch all failed, using mock");
+                  resolve(mockSearchNearby(lat, lng, cityHint));
+                }
+              });
             }
           });
         });
