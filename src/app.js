@@ -112,7 +112,7 @@ async function onSearchSubmit(keyword) {
     // 再次使用 Promise.race 添加超时，传入城市提示
     const data = await Promise.race([
       AMapAPI.searchNearby(loc.lat, loc.lng, loc.city),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('搜索餐厅超时')), 5000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('搜索餐厅超时')), 20000))
     ]);
     console.log('餐厅搜索成功', data.length, '条');
     
