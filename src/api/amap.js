@@ -128,8 +128,42 @@ const AMapWrapper = (() => {
     return Math.abs(hash);
   }
 
+  // 从搜索词中提取区域名（用于地址显示）
+  function extractAreaName(address, cityData) {
+    const addr = address.trim();
+
+    // 匹配 "XX市XX区/县/镇" 格式
+    const cityDistMatch = addr.match(/^(.*?市)?(.*?(?:区|县|镇|乡|新区|开发区))$/);
+    if (cityDistMatch && cityDistMatch[2]) {
+      return (cityDistMatch[1] || '') + cityDistMatch[2];
+    }
+
+    // 精确匹配城市key（如搜索"正定"匹配CITIES['正定']）
+    if (addr === cityData.city || addr === cityData.name) {
+      // 市级条目：name包含city key（如"济南市"包含"济南"）→ 返回name
+      // 县级条目：name不包含city key（如"石家庄市"不包含"正定"）→ 返回dist
+      if (cityData.name.includes(cityData.city)) {
+        return cityData.name; // "济南市"
+      } else {
+        return cityData.dist; // "正定县"
+      }
+    }
+
+    // 搜索词包含城市key（如"正定恒州南路"包含"正定"）
+    if (addr.includes(cityData.city)) {
+      if (cityData.name.includes(cityData.city)) {
+        return cityData.name; // 市级
+      } else {
+        return cityData.dist; // 县级
+      }
+    }
+
+    // 省级匹配
+    return cityData.name;
+  }
+
   // 生成一个附近餐厅（根据用户坐标和种子数散布）
-  function generateRestaurant(lat, lng, seed, index, cityName, distName) {
+  function generateRestaurant(lat, lng, seed, index, areaName) {
     const r = seededRandom(seed, index);
     
     // 在用户位置周围3km内随机散布
@@ -167,9 +201,9 @@ const AMapWrapper = (() => {
       ? `${Math.round(distKm * 1000)}m` 
       : `${distKm.toFixed(1)}km`;
     
-    // 地址：城市+区+街道+门牌（无城市时只用街道门牌）
-    const address = cityName
-      ? (cityName + (distName || '') + street + num + '号')
+    // 地址：区域名 + 街道 + 门牌
+    const address = areaName
+      ? (areaName + street + num + '号')
       : (street + num + '号');
     
     return {
@@ -221,31 +255,16 @@ const AMapWrapper = (() => {
   async function searchNearby(lat, lng, cityHint) {
     console.log('searchNearby called', lat, lng, cityHint);
     try {
-      // 根据坐标找城市信息（用于生成城市特色的餐厅名）
-      let cityData = null;
-      if (cityHint) {
-        cityData = matchCity(cityHint);
-      }
-      if (!cityData) {
-        for (const [name, data] of Object.entries(CITIES)) {
-          if (Math.abs(data.lat - lat) < 0.5 && Math.abs(data.lng - lng) < 0.5) {
-            cityData = { city: name, ...data };
-            break;
-          }
-        }
-      }
-      if (!cityData) {
-        cityData = { city: '全国', ...CITIES['北京'] };
-      }
+      // 直接用 cityHint 作为区域名生成地址，不再二次匹配城市
+      const areaName = cityHint || '';
 
       // 生成20个餐厅，散布在用户周围
       const count = 20;
-      // seed 基于坐标+城市+区，确保同城市不同位置生成不同餐厅
-      const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${cityData.city}_${cityData.dist}`);
+      const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_${areaName}`);
       const restaurants = [];
       
       for (let i = 0; i < count; i++) {
-        restaurants.push(generateRestaurant(lat, lng, seed, i, cityData.name, cityData.dist));
+        restaurants.push(generateRestaurant(lat, lng, seed, i, areaName));
       }
       
       // 按距离排序
@@ -299,19 +318,18 @@ const AMapWrapper = (() => {
       if (cityData) {
         // 有城市匹配：以此城市为基准，加上地址的hash偏移
         const seed = hashCode(address);
-        // 用hash在市中心附近生成精确坐标（0.3度约等于30km范围）
-        const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.5;
-        const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.7;
+        // 用hash在市中心附近生成精确坐标（缩小偏移范围，更贴近实际位置）
+        const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.1;
+        const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.12;
         
-        // 从地址中提取区/县信息
-        const districtMatch = address.match(/([^市]+区|[^市]+县|[^市]+镇)/);
-        const district = districtMatch ? districtMatch[1] : cityData.dist;
+        // 提取正确的区域名（县级返回县名，市级返回市名）
+        const areaName = extractAreaName(address, cityData);
         
         const result = [{
           lat,
           lng,
           formattedAddress: address,
-          city: cityData.name
+          city: areaName
         }];
         console.log('geocode result (city matched)', result);
         return result;
@@ -338,12 +356,11 @@ const AMapWrapper = (() => {
 
   async function searchByKeyword(lat, lng, keyword) {
     const cityData = matchCity(keyword);
-    const cn = cityData ? cityData.name : '';
-    const dn = cityData ? cityData.dist : '';
+    const areaName = cityData ? (cityData.name.includes(cityData.city) ? cityData.name : cityData.dist) : '';
     const seed = hashCode(`${lat.toFixed(4)}_${lng.toFixed(4)}_kw_${keyword}`);
     const results = [];
     for (let i = 0; i < 6; i++) {
-      results.push(generateRestaurant(lat, lng, seed, i, cn, dn));
+      results.push(generateRestaurant(lat, lng, seed, i, areaName));
     }
     return new Promise(resolve => {
       setTimeout(() => {
@@ -358,15 +375,16 @@ const AMapWrapper = (() => {
       setTimeout(() => {
         if (cityData) {
           const seed = hashCode(keyword);
-          const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.3;
-          const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.4;
+          const lat = cityData.lat + (seededRandom(seed, 0) - 0.5) * 0.1;
+          const lng = cityData.lng + (seededRandom(seed, 1) - 0.5) * 0.12;
+          const areaName = extractAreaName(keyword, cityData);
           resolve([{
             id: 'addr1',
-            name: cityData.name,
-            address: cityData.name + cityData.dist,
+            name: areaName,
+            address: areaName,
             lat,
             lng,
-            city: cityData.name
+            city: areaName
           }]);
         } else {
           const seed = hashCode(keyword);
